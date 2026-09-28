@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
+### Added
+
+- `LIMITS.nesting` (100) and the `too-deep` lint warning for tags nested past it.
+
 ### Changed
 
 - An unclosed `[box]` or `[spoilerbox]` renders as a box that runs to the end of what holds it (the post, or the quote or box around it), as on osu!, instead of as text. `lint` reports it as an `unclosed-tag` warning, and the node's `close` is `null`.
@@ -30,5 +36,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./flags`: `COUNTRIES` (ISO 3166-1 alpha-2), `findCountry`, `searchCountries`, `flagUrl` and `normalizeCountryCode`.
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
-[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/haruhimemoe/bbcode/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/haruhimemoe/bbcode/releases/tag/v0.1.0
