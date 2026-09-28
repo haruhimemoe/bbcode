@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - Deeply nested tags no longer overflow the stack. A 60,000 character post of nested `[quote]`, `[box]` or `[list]` tags, or boxes nested inside box titles, threw `RangeError` from `render` and `lint` in Node and Chromium. Tags nested past `LIMITS.nesting` (100) now stay text, and `lint` reports the new `too-deep` warning once.
+- `validateImagemap` (and so `serializeImagemap`) refuses `[/imagemap]` in the image URL, a link or a title. It ended the written block early, so osu! showed the imagemap as text.
 
 ## [0.1.0] - 2026-09-28
 

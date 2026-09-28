@@ -183,7 +183,7 @@ Positions and sizes are percentages of the image. `href` is `#` (no link), an `h
 | Function | What it does |
 | --- | --- |
 | `parseImagemap(text)` | Reads a whole `[imagemap]...[/imagemap]` block or just its content. Returns `{ ok: true, imagemap, issues: [] }` or `{ ok: false, imagemap: null, issues }`, where each issue is `{ line, start, end, message }` for a line osu! would refuse. |
-| `validateImagemap(map)` | Checks an object: http(s) image without spaces, at least one region, numbers from 0 to 100, valid links, one-line titles. Returns `{ field, message }[]`. |
+| `validateImagemap(map)` | Checks an object: http(s) image without spaces, at least one region, numbers from 0 to 100, valid links, one-line titles, and no `[/imagemap]` anywhere. Returns `{ field, message }[]`. |
 | `serializeImagemap(map)` | Writes the block. Throws `TypeError` listing the problems when `validateImagemap` finds any. |
 | `formatPercent(n)` | A number with at most 4 decimals and no exponent. |
 

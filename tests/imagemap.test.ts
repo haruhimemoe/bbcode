@@ -96,6 +96,15 @@ describe("validateImagemap and serializeImagemap", () => {
     ]);
     expect(() => serializeImagemap(bad)).toThrow(/Invalid imagemap: image: /);
   });
+  it("refuses [/imagemap] anywhere, which would end the block early", () => {
+    const region = { x: 0, y: 0, w: 1, h: 1, href: "#", title: "a [/imagemap] b" };
+    const map: Imagemap = { image: "https://a.b/[/imagemap].png", regions: [region] };
+    const hrefd = { ...region, href: "https://a.b/[/imagemap]", title: "" };
+    expect(validateImagemap(map).map((p) => p.field)).toEqual(["image", "regions.0.title"]);
+    expect(validateImagemap({ ...map, image: "https://a.b/i.png", regions: [hrefd] })).toEqual([
+      { field: "regions.0.href", message: "Use #, an http(s) URL or mailto: without [/imagemap]." },
+    ]);
+  });
   it("formats percentages without exponents", () => {
     expect([formatPercent(1e-7), formatPercent(12.34567), formatPercent(100)]).toEqual([
       "0",
