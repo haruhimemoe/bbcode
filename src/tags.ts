@@ -106,7 +106,7 @@ export const TAGS: readonly TagSpec[] = Object.freeze([
     "[list]\n[*]one\n[*]two\n[/list]",
     { ...BLOCK, arg: "optional", argKind: "list", content: "items" },
   ),
-  spec("*", "A list item. Only works inside [list].", "[*]item", BLOCK),
+  spec("*", "A list item. Only works inside [list].", "[list]\n[*]item\n[/list]", BLOCK),
   spec("url", "A link. http, https and ftp only.", "[url=https://osu.ppy.sh]osu![/url]", {
     arg: "optional",
     argKind: "url",
