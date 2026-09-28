@@ -39,8 +39,13 @@ function dropEchoes(
   return diagnostics.filter((d) => {
     if (d.code !== "stray-close") return true;
     const tag = text.slice(d.start + 2, d.end - 1);
-    const i = pending.findIndex(([name, start]) => name === tag && start < d.start);
-    if (i < 0) return true;
+    // Sorted by start, so stop at the first one not before this close.
+    let i = 0;
+    while (i < pending.length && (pending[i] as [string, number])[1] < d.start) {
+      if ((pending[i] as [string, number])[0] === tag) break;
+      i++;
+    }
+    if (i >= pending.length || (pending[i] as [string, number])[1] >= d.start) return true;
     pending.splice(i, 1);
     return false;
   });

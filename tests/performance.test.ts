@@ -40,6 +40,7 @@ describe("hostile input", () => {
     ["[a= then ]", fill("[a=", "]")],
     ["a space then dots", ` ${fill(".")}`],
     ["a link ending in dots", `https://a${fill(".", "x")}`],
+    ["closes before openings", "[/c]".repeat(7500) + "[c]\n".repeat(7500)],
   ])("%s stays fast", (_, src) => {
     const started = performance.now();
     render(src);
