@@ -26,6 +26,8 @@ describe("each code", () => {
     ["[code][/code]", ['unclosed-tag error "[code]"']],
     ["[profile]a\nb[/profile]", ['unclosed-tag error "[profile]"']],
     ["[img]x", ['unclosed-tag error "[img]"']],
+    ["[box=a]x", ['unclosed-tag warning "[box=a]"']],
+    ["[quote][spoilerbox]x[/quote]", ['unclosed-tag warning "[spoilerbox]"']],
     ["x[/b]", ['stray-close warning "[/b]" -> "x"']],
     ["[/*]", ['stray-close warning "[/*]" -> ""']],
     [

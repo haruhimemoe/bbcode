@@ -15,6 +15,10 @@ const MEDIA = new Set(["img", "audio", "url", "email", "youtube"]);
 
 function unclosed(e: Extract<ParseEvent, { kind: "unclosed" }>): Diagnostic {
   const tag = `[${e.tag}]`;
+  if (e.reason === "box") {
+    const message = `${tag} is never closed, so on osu! the box runs to the end of what holds it.`;
+    return { code: "unclosed-tag", severity: "warning", message, start: e.start, end: e.end };
+  }
   const message =
     e.reason === "line"
       ? `${tag} must be closed on the same line, or osu! shows it as text.`

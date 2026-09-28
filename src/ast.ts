@@ -29,7 +29,7 @@ export interface TagNode {
   arg: string | null;
   /** The opening tag exactly as written, e.g. `[color=#ff66aa]`. */
   open: string;
-  /** The closing tag as written, or `null` for a list item closed by the next `[*]`. */
+  /** The closing tag as written, or `null` for a list item closed by the next `[*]` or a box never closed. */
   close: string | null;
   /** Child nodes. Tags whose content osu! does not parse (`code`, `img`...) hold one text node. */
   children: Node[];

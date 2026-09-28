@@ -275,6 +275,7 @@ Also like osu!:
 | Code | Severity | When | Fix |
 | --- | --- | --- | --- |
 | `unclosed-tag` | error | An opening tag with no close (or closed after the tag around it, or on another line for one-line tags) | |
+| `unclosed-tag` | warning | A `[box]` or `[spoilerbox]` with no close: it runs to the end of what holds it | |
 | `stray-close` | warning | A closing tag with no opening tag | removes it |
 | `unknown-tag` | warning | `[center]`, wrong case (`[B]`), tags from other forums (`[font]`, `[table]`...), an argument a tag doesn't take, `[quote=name]` without quotes, `[*]` outside a list | `[centre]`, lowercase, drop the argument, add quotes |
 | `bad-size` | error | Not a whole number, or outside 30..200 (osu! clamps) | the clamped value |
@@ -304,7 +305,7 @@ Images, audio and YouTube embeds load from their own hosts in the viewer's brows
 ## Differences from osu!
 
 - **Malformed nesting.** osu! converts each tag on its own, so crossed tags (`[b][i]x[/b][/i]`) can still render there. A tree can't hold that, so here the inner tag shows as text and `lint` reports it.
-- **Unclosed boxes, quotes and lists** show as text here; osu! may open them to the end of the post.
+- **Unclosed quotes and lists.** osu! pairs the first openings with the closes there are, so with one opening too many it's the last one that shows as text there; here it's the one left without a close. Unclosed boxes match osu!: they run to the end of what holds them.
 - **Strict values.** URLs with spaces, imagemap numbers like `1.2.3`, and YouTube ids with other characters are refused here, where osu! outputs something broken.
 - **Markup.** Boxes are native `<details>` elements and classes use a `bb-` prefix. The output is meant to look like osu!, not to copy its HTML.
 - **Not rendered:** smilies, image sizes (osu! measures images on its servers), and profile names (osu! replaces them with the current username when the post is saved).

@@ -182,6 +182,17 @@ describe("automatic links", () => {
   });
 });
 
+describe("unclosed boxes", () => {
+  it("run to the end of what holds them, as osu! closes their markup there", () => {
+    expect(html("[box=a]\nx")).toBe(
+      '<details class="bb-box"><summary class="bb-box__title">a</summary><div class="bb-box__body">x</div></details>',
+    );
+    expect(html("[quote][spoilerbox]x[/quote]y")).toBe(
+      '<blockquote class="bb-quote"><details class="bb-box"><summary class="bb-box__title">SPOILER</summary><div class="bb-box__body">x</div></details></blockquote>y',
+    );
+  });
+});
+
 describe("box titles and options", () => {
   it("parses inline tags in a box title", () => {
     expect(html("[box=[b]T[/b] & co]x[/box]")).toContain(

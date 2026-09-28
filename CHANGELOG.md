@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- An unclosed `[box]` or `[spoilerbox]` renders as a box that runs to the end of what holds it (the post, or the quote or box around it), as on osu!, instead of as text. `lint` reports it as an `unclosed-tag` warning, and the node's `close` is `null`.
+
 ### Fixed
 
 - Deeply nested tags no longer overflow the stack. A 60,000 character post of nested `[quote]`, `[box]` or `[list]` tags, or boxes nested inside box titles, threw `RangeError` from `render` and `lint` in Node and Chromium. Tags nested past `LIMITS.nesting` (100) now stay text, and `lint` reports the new `too-deep` warning once.

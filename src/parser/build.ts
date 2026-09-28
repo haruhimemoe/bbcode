@@ -20,7 +20,7 @@ export type ParseEvent =
       tag: string;
       start: number;
       end: number;
-      reason: "eof" | "crossed" | "line";
+      reason: "eof" | "crossed" | "line" | "box";
     }
   | { kind: "stray-close"; tag: string; start: number; end: number }
   | { kind: "self-nested"; tag: string; start: number; end: number }
@@ -77,8 +77,18 @@ export function build(src: string): BuildResult {
     node.end = end;
     pushNode(top().children, node);
   };
-  /** Pops the top frame as text. */
-  const unwind = (reason: "eof" | "crossed"): void => {
+  /**
+   * Pops the top frame as text. An unclosed box instead ends at `at`: osu! turns every box
+   * opening into markup, and the cleanup closes it where the element holding it ends.
+   */
+  const unwind = (reason: "eof" | "crossed", at: number): void => {
+    const last = top().node as TagNode;
+    if (last.name === "box" || last.name === "spoilerbox") {
+      const end = last.start + last.open.length;
+      events.push({ kind: "unclosed", tag: last.tag, start: last.start, end, reason: "box" });
+      finish(at, null);
+      return;
+    }
     const node = (stack.pop() as Frame).node as TagNode;
     if (node.name !== "*") {
       const end = node.start + node.open.length;
@@ -203,7 +213,7 @@ export function build(src: string): BuildResult {
     while (stack.length - 1 > idx) {
       const implicitItem = top().node?.name === "*" && stack.length - 2 === idx;
       if (implicitItem) finish(tok.start, null);
-      else unwind("crossed");
+      else unwind("crossed", tok.start);
     }
     finish(tok.end, src.slice(tok.start, tok.end));
     textStart = tok.end;
@@ -224,6 +234,6 @@ export function build(src: string): BuildResult {
     else i = tok.kind === "open" ? open(tok) : close(tok);
   }
   flush(src.length);
-  while (stack.length > 1) unwind("eof");
+  while (stack.length > 1) unwind("eof", src.length);
   return { doc: { type: "document", source: src, children: root }, events, tokenStarts };
 }
