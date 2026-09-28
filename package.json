@@ -1,0 +1,84 @@
+{
+  "name": "@haruhimemoe/bbcode",
+  "version": "0.1.0",
+  "description": "Parse, render, lint and count osu! BBCode the way osu! does. Safe HTML, template fields, flags, imagemaps and gradients. No dependencies.",
+  "keywords": [
+    "osu",
+    "osu!",
+    "bbcode",
+    "userpage",
+    "forum",
+    "parser",
+    "renderer",
+    "linter"
+  ],
+  "homepage": "https://github.com/haruhimemoe/bbcode#readme",
+  "bugs": "https://github.com/haruhimemoe/bbcode/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haruhimemoe/bbcode.git"
+  },
+  "license": "MIT",
+  "author": "David (https://dvh.sh)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "default": "./dist/helpers/index.js"
+    },
+    "./imagemap": {
+      "types": "./dist/imagemap/index.d.ts",
+      "default": "./dist/imagemap/index.js"
+    },
+    "./flags": {
+      "types": "./dist/flags/index.d.ts",
+      "default": "./dist/flags/index.js"
+    },
+    "./template": {
+      "types": "./dist/template/index.d.ts",
+      "default": "./dist/template/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "bun@1.4.2",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "bun run clean && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/styles.css','dist/styles.css')\"",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:dist": "bun run build && node scripts/smoke.mjs",
+    "check:consumer": "bun run build && node scripts/check-consumer.mjs",
+    "prepublishOnly": "bun run check && bun run typecheck && bun run test && bun run test:dist",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/node": "26.6.2",
+    "@vitest/coverage-v8": "5.0.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}
