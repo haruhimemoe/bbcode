@@ -1,0 +1,32 @@
+# @haruhimemoe/bbcode
+
+> Parses, renders, lints and counts osu! BBCode the way osu! does. `parse` gives a lossless tree (serialize(parse(x)) === x), `render` gives safe HTML with `bb-` classes and osu!'s newline eating, `lint` explains everything osu! would show wrong, `count` checks the 60,000 character limit. Subpaths add builders (colors, gradients, flags, profiles, boxes, lists, escape), imagemaps, a country list with osu! flag URLs, template fields and a stylesheet. No runtime dependencies. ESM for Node 22.12+, Bun, Deno, browsers and bundlers. Not affiliated with ppy.
+
+Main exports: `parse(text)`, `serialize(doc)`, `render(textOrDoc, options?)`, `lint(text, options?)`, `applyFix(text, fix)`, `count(text, limit?)`, `LIMITS`, `TAGS`, `findTag(name)`, `LINT_CODES`. Subpaths: `@haruhimemoe/bbcode/helpers`, `/imagemap`, `/flags`, `/template`, `/styles.css`.
+
+## Docs
+
+- [Install](https://github.com/haruhimemoe/bbcode#install): bun, npm and deno commands
+- [Quick start](https://github.com/haruhimemoe/bbcode#quick-start): render a preview, lint, count
+- [API](https://github.com/haruhimemoe/bbcode#api): every export per subpath with its signature
+- [Supported tags](https://github.com/haruhimemoe/bbcode#supported-tags): each tag, its argument and what it renders
+- [Lint codes](https://github.com/haruhimemoe/bbcode#lint-codes): the eleven codes, severities and fixes
+- [Safety](https://github.com/haruhimemoe/bbcode#safety): what render checks, and what the proxy option must return
+- [Differences from osu!](https://github.com/haruhimemoe/bbcode#differences-from-osu): where output differs on purpose
+
+## Package
+
+- [npm](https://www.npmjs.com/package/@haruhimemoe/bbcode): published versions
+- [Source](https://github.com/haruhimemoe/bbcode/tree/main/src): parser, renderer, linter, helpers
+- [License](https://github.com/haruhimemoe/bbcode/blob/main/LICENSE): MIT
+
+## Related
+
+- [haruhime.moe](https://www.haruhime.moe): home of the haruhime osu! tools
+- [@haruhimemoe/osu](https://github.com/haruhimemoe/osu): osu! API v2 client, for turning usernames into user ids
+
+## Optional
+
+- [CHANGELOG](https://github.com/haruhimemoe/bbcode/blob/main/CHANGELOG.md): release history
+- [CONTRIBUTING](https://github.com/haruhimemoe/bbcode/blob/main/CONTRIBUTING.md): setup, checks and how to submit a change
+- [AGENTS.md](https://github.com/haruhimemoe/bbcode/blob/main/AGENTS.md): conventions and file layout for AI agents working on this repo

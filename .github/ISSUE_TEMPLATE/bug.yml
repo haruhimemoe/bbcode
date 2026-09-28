@@ -1,0 +1,30 @@
+name: Renders differently from osu!, or a bug
+description: Output that doesn't match osu!, a wrong lint, or something else broken
+labels: [bug]
+body:
+  - type: textarea
+    id: bbcode
+    attributes:
+      label: BBCode
+      description: The smallest input that shows the problem.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What this package does, and what osu! does
+      description: Paste the HTML or diagnostics you got. For a rendering difference, link a post or userpage on osu! that shows the same BBCode, or describe what it shows.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
