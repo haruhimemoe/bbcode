@@ -24,7 +24,7 @@
 | `src/index.ts` | The root exports. Nothing else. |
 | `src/ast.ts` | `Document`, `Node`, `TagNode`, `TextNode`. |
 | `src/tags.ts` | `TAGS` and `findTag`: the public tag registry. |
-| `src/parser/` | `rules.ts` (per-tag pairing and argument rules), `scan.ts` (one tag token), `build.ts` (the tree builder and its events), `nodes.ts`. |
+| `src/parser/` | `rules.ts` (per-tag pairing and argument rules), `scan.ts` (one tag token), `build.ts` (the tree builder and its events), `nodes.ts`, `find.ts` (the remembering search and box title table that keep parsing linear; scan a document with one `scanner`). Nesting stops at `LIMITS.nesting`. |
 | `src/parse.ts` | `parse` and `serialize`. |
 | `src/safety.ts` | Escaping and the URL, color, size and YouTube id checks. Internal. |
 | `src/render/` | `index.ts` (`render`), `inline.ts`, `block.ts`, `text.ts` (escaping, automatic links), `eat.ts` (newline eating), `context.ts` (`RenderOptions`). |
@@ -35,7 +35,7 @@
 | `src/flags/` | `./flags`: `countries.ts` (data), `url.ts` (flag URLs), `index.ts`. |
 | `src/template/` | `./template`: `index.ts` (fill, fields), `format.ts` (values by kind). |
 | `src/styles.css` | `./styles.css`. The build copies it to `dist/`. |
-| `tests/` | Vitest: `render`, `safety`, `parse`, `roundtrip`, `lint`, `imagemap`, `helpers`, `flags`, `template`, `api`. |
+| `tests/` | Vitest: `render`, `safety`, `parse`, `roundtrip`, `lint`, `imagemap`, `helpers`, `flags`, `template`, `api`, `nesting` (deep input), `performance` (hostile input stays linear). |
 | `scripts/smoke.mjs` | Imports the built package through its exports map (`bun run test:dist`). |
 | `scripts/check-consumer.mjs` | Packs the package, installs it in a temp project, then typechecks and runs a strict consumer (`bun run check:consumer`). |
 | `.github/workflows/` | `ci.yml` (checks, coverage, dist on Node 22.12 and 24, consumer) and `release.yml` (publishes on a GitHub release). |
