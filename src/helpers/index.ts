@@ -1,7 +1,7 @@
 /**
  * @file src/helpers/index.ts
  * @desc @haruhimemoe/bbcode/helpers: builders for common BBCode (colors, gradients, flags,
- *       profiles, boxes, lists) and `escape` for user text.
+ *       profiles, boxes, lists) and `escapeBBCode` for user text.
  * @author David @dvhsh (https://dvh.sh)
  * @created Mon Sep 28, 2026
  * @modified Mon Sep 28, 2026
@@ -16,12 +16,11 @@ const BREAK = "​";
 /**
  * Breaks every tag osu! would recognize in `text`, so it shows as typed. Inserts a zero-width
  * space after the `[` of each tag; nothing else changes.
- * @function escape
+ * @function escapeBBCode
  * @param {string} text - User text that should not be read as BBCode.
  * @returns {string} The text with its tags broken.
  */
-// biome-ignore lint/suspicious/noShadowRestrictedNames: a module export named for what it does; the legacy global escape() is unrelated.
-export function escape(text: string): string {
+export function escapeBBCode(text: string): string {
   let out = "";
   let last = 0;
   for (let i = text.indexOf("["); i >= 0; i = text.indexOf("[", i + 1)) {

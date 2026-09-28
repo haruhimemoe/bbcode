@@ -36,7 +36,7 @@ describe("exports", () => {
     [
       "./helpers",
       helpers,
-      ["box", "color", "escape", "flag", "gradient", "list", "normalizeColor", "profile"],
+      ["box", "color", "escapeBBCode", "flag", "gradient", "list", "normalizeColor", "profile"],
     ],
     [
       "./imagemap",

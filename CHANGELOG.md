@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `render`: safe HTML with `bb-` classes, osu!'s newline eating and automatic links, and an optional media proxy.
 - `lint` with eleven codes and fixes where obvious, `applyFix`, `count`, `LIMITS`, `TAGS` and `findTag`.
 - `./styles.css`: a dark stylesheet for rendered output, with a light variant (`bb--light`).
-- `./helpers`: `color`, `normalizeColor`, `gradient` (with its character cost), `flag`, `profile`, `box`, `list` and `escape`.
+- `./helpers`: `color`, `normalizeColor`, `gradient` (with its character cost), `flag`, `profile`, `box`, `list` and `escapeBBCode`.
 - `./imagemap`: `parseImagemap`, `validateImagemap`, `serializeImagemap` and `formatPercent`.
 - `./flags`: `COUNTRIES` (ISO 3166-1 alpha-2), `findCountry`, `searchCountries`, `flagUrl` and `normalizeCountryCode`.
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.

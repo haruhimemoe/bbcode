@@ -1,4 +1,4 @@
-<p align="center"><a href="https://github.com/haruhimemoe/bbcode"><img alt="@haruhimemoe/bbcode" src="https://haruhime.moe/brand/repos/bbcode.png" width="640"></a></p>
+<p align="center"><a href="https://github.com/haruhimemoe/bbcode"><picture><source media="(prefers-color-scheme: light)" srcset="https://www.haruhime.moe/brand/repos/bbcode-banner-on-light.svg"><img alt="@haruhimemoe/bbcode" src="https://www.haruhime.moe/brand/repos/bbcode-banner.svg" width="640"></picture></a></p>
 
 # @haruhimemoe/bbcode
 
@@ -60,7 +60,7 @@ Five entry points and a stylesheet:
 | Import | What's in it |
 | --- | --- |
 | `@haruhimemoe/bbcode` | `parse`, `serialize`, `render`, `lint`, `applyFix`, `count`, `LIMITS`, `TAGS`, `findTag`, `LINT_CODES` |
-| `@haruhimemoe/bbcode/helpers` | `color`, `normalizeColor`, `gradient`, `flag`, `profile`, `box`, `list`, `escape` |
+| `@haruhimemoe/bbcode/helpers` | `color`, `normalizeColor`, `gradient`, `flag`, `profile`, `box`, `list`, `escapeBBCode` |
 | `@haruhimemoe/bbcode/imagemap` | `parseImagemap`, `validateImagemap`, `serializeImagemap`, `formatPercent` |
 | `@haruhimemoe/bbcode/flags` | `COUNTRIES`, `findCountry`, `searchCountries`, `flagUrl`, `normalizeCountryCode` |
 | `@haruhimemoe/bbcode/template` | `fillTemplate`, `templateFields`, `FIELD_KINDS` |
@@ -167,7 +167,7 @@ interface TagSpec {
 | `profile(idOrName, name?)` | A number is a user id: `[profile=2]peppy[/profile]` (name defaults to the id; osu! swaps in the current username when the post is saved). A string is a username: `[profile]peppy[/profile]`. |
 | `box(title, body)` | `[box=title]` with the body on its own lines, or `[spoilerbox]` when `title` is `null` or `""`. Throws `TypeError` for a title with a newline or unbalanced brackets. |
 | `list(items, { ordered?, title? })` | `[list]` (or `[list=1]`), an optional title line, one `[*]` line per item, `[/list]`. |
-| `escape(text)` | The text with every tag osu! would read broken by a zero-width space after its `[`, so user input shows as typed. |
+| `escapeBBCode(text)` | The text with every tag osu! would read broken by a zero-width space after its `[`, so user input shows as typed. |
 
 osu! can't tell whether its image proxy passes SVG flags until you post; if a modern flag doesn't show, use `style: "legacy"`.
 

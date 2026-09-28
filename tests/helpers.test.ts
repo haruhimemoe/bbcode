@@ -1,7 +1,7 @@
 /**
  * @file tests/helpers.test.ts
  * @desc The builders in ./helpers: color, gradient (colors and cost), flag, profile, box, list
- *       and escape.
+ *       and escapeBBCode.
  * @author David @dvhsh (https://dvh.sh)
  * @created Mon Sep 28, 2026
  * @modified Mon Sep 28, 2026
@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   box,
   color,
-  escape as escapeBBCode,
+  escapeBBCode,
   flag,
   gradient,
   list,
@@ -122,7 +122,7 @@ describe("flag, profile, box, list", () => {
   });
 });
 
-describe("escape", () => {
+describe("escapeBBCode", () => {
   it("breaks every tag osu! would read and nothing else", () => {
     const text = "[b]x[/b] [B] [x] [*] a[b";
     const escaped = escapeBBCode(text);

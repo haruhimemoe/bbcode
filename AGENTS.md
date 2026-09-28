@@ -30,7 +30,7 @@
 | `src/render/` | `index.ts` (`render`), `inline.ts`, `block.ts`, `text.ts` (escaping, automatic links), `eat.ts` (newline eating), `context.ts` (`RenderOptions`). |
 | `src/lint/` | `index.ts` (`lint`, `applyFix`), `events.ts`, `tree.ts`, `scan.ts`, `colors.ts`, `types.ts`. |
 | `src/limits.ts` | `LIMITS` and `count`. |
-| `src/helpers/` | `./helpers`: `color.ts` (color, gradient), `index.ts` (flag, profile, box, list, escape). |
+| `src/helpers/` | `./helpers`: `color.ts` (color, gradient), `index.ts` (flag, profile, box, list, escapeBBCode). |
 | `src/imagemap/` | `./imagemap`: parse, validate, serialize. |
 | `src/flags/` | `./flags`: `countries.ts` (data), `url.ts` (flag URLs), `index.ts`. |
 | `src/template/` | `./template`: `index.ts` (fill, fields), `format.ts` (values by kind). |
