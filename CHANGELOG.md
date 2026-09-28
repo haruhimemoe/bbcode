@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Deeply nested tags no longer overflow the stack. A 60,000 character post of nested `[quote]`, `[box]` or `[list]` tags, or boxes nested inside box titles, threw `RangeError` from `render` and `lint` in Node and Chromium. Tags nested past `LIMITS.nesting` (100) now stay text, and `lint` reports the new `too-deep` warning once.
 - `validateImagemap` (and so `serializeImagemap`) refuses `[/imagemap]` in the image URL, a link or a title. It ended the written block early, so osu! showed the imagemap as text.
+- Parsing, rendering and linting take linear time on hostile input. 60,000 characters of `[box=`, `[c]` with a close on a later line, `[url]` or unterminated `[a=` took up to 5 seconds in Node, so one post could stall a server rendering it. Close tags, newlines and box title ends are now found once per document.
 - A bare link followed by bracketed text (`https://a.b[x]`) leaves the brackets out, as osu! does.
 
 ## [0.1.0] - 2026-09-28

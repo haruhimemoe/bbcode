@@ -10,7 +10,7 @@
 import { RULES } from "../parser/rules.js";
 import type { Diagnostic, Fix } from "./types.js";
 
-const LOOKS_LIKE_TAG = /\[(\/?)([A-Za-z][A-Za-z0-9]*)(=[^\]\n]*)?\]/g;
+const LOOKS_LIKE_TAG = /\[(\/?)([A-Za-z][A-Za-z0-9]*)(=[^\]\n[]*)?\]/g;
 
 /** Common BBCode tags from other forums that osu! doesn't support. */
 const FOREIGN = new Set(

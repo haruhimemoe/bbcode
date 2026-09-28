@@ -7,6 +7,7 @@
  * @modified Mon Sep 28, 2026
  */
 
+import { nextNewline, type Scanner, scanner } from "./find.js";
 import { RULES, type Rule } from "./rules.js";
 
 /** A tag token found in the source. */
@@ -29,49 +30,30 @@ function readName(src: string, i: number): number {
   return j;
 }
 
-/** Finds the `]` that ends a box title, allowing balanced and `\`-escaped brackets. */
-function balancedEnd(src: string, i: number): number {
-  let depth = 0;
-  for (let j = i; j < src.length; j++) {
-    const ch = src.charAt(j);
-    const next = src.charAt(j + 1);
-    if (ch === "\\" && (next === "[" || next === "]")) j++;
-    else if (ch === "[") depth++;
-    else if (ch === "]") {
-      if (depth === 0) return j;
-      depth--;
-    }
-  }
-  return -1;
-}
-
 /** Reads `=argument]` for `rule` at `i` (the `=`). Returns `[arg, end]` or `null`. */
-function readArg(src: string, i: number, rule: Rule): [string, number] | null {
+function readArg(src: string, i: number, rule: Rule, scan: Scanner): [string, number] | null {
   const from = i + 1;
   if (rule.argForm === "balanced") {
-    const close = balancedEnd(src, from);
+    const close = scan.titleEnd(from);
     return close < 0 ? null : [src.slice(from, close), close + 1];
   }
-  if (rule.argForm === "quoted") {
-    if (src.charAt(from) !== '"') return null;
-    const close = src.indexOf('"]', from + 1);
-    if (close < 0) return null;
-    const arg = src.slice(from + 1, close);
-    return arg.includes("\n") || !rule.checkArg(arg) ? null : [arg, close + 2];
-  }
-  const close = src.indexOf("]", from);
-  if (close < 0) return null;
-  const arg = src.slice(from, close);
-  return arg.includes("\n") || !rule.checkArg(arg) ? null : [arg, close + 1];
+  const quoted = rule.argForm === "quoted";
+  if (quoted && src.charAt(from) !== '"') return null;
+  const start = quoted ? from + 1 : from;
+  const close = scan.find(quoted ? '"]' : "]", start);
+  if (close < 0 || nextNewline(scan.find, start) < close) return null;
+  const arg = src.slice(start, close);
+  return rule.checkArg(arg) ? [arg, close + (quoted ? 2 : 1)] : null;
 }
 
 /**
  * Reads the tag token starting at `i`, where `src[i]` is `[`.
  * @param src - The whole source.
  * @param i - Offset of a `[`.
+ * @param scan - Searches over `src`; pass one scanner to every call on the same text.
  * @returns The token, or `null` when the text there is not a tag osu! recognizes.
  */
-export function scanToken(src: string, i: number): Token | null {
+export function scanToken(src: string, i: number, scan: Scanner = scanner(src)): Token | null {
   const closing = src.charAt(i + 1) === "/";
   const nameStart = i + (closing ? 2 : 1);
   if (src.charAt(nameStart) === "*") {
@@ -91,6 +73,6 @@ export function scanToken(src: string, i: number): Token | null {
     return { kind: "open", tag, arg: null, start: i, end: nameEnd + 1 };
   }
   if (after !== "=" || rule.arg === "none") return null;
-  const read = readArg(src, nameEnd, rule);
+  const read = readArg(src, nameEnd, rule, scan);
   return read ? { kind: "open", tag, arg: read[0], start: i, end: read[1] } : null;
 }

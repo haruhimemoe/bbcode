@@ -8,6 +8,7 @@
  */
 
 import { type FlagStyle, flagUrl } from "../flags/url.js";
+import { scanner } from "../parser/find.js";
 import { scanToken } from "../parser/scan.js";
 
 /** Zero-width space: inserted after `[` to stop osu! reading a tag. */
@@ -23,8 +24,9 @@ const BREAK = "​";
 export function escapeBBCode(text: string): string {
   let out = "";
   let last = 0;
+  const scan = scanner(text);
   for (let i = text.indexOf("["); i >= 0; i = text.indexOf("[", i + 1)) {
-    if (!scanToken(text, i)) continue;
+    if (!scanToken(text, i, scan)) continue;
     out += `${text.slice(last, i + 1)}${BREAK}`;
     last = i + 1;
   }

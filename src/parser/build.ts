@@ -9,6 +9,7 @@
 
 import type { Document, Node, TagNode } from "../ast.js";
 import { LIMITS } from "../limits.js";
+import { nextNewline, scanner } from "./find.js";
 import { flattenInto, openNode, pushNode, pushText } from "./nodes.js";
 import { type RawProblem, RULES, type Rule } from "./rules.js";
 import { scanToken, type Token } from "./scan.js";
@@ -59,6 +60,7 @@ export function build(src: string): BuildResult {
   const events: ParseEvent[] = [];
   const tokenStarts = new Set<number>();
   const failedCloses = new Set<number>();
+  const scan = scanner(src);
   let textStart = 0;
 
   const top = (): Frame => stack[stack.length - 1] as Frame;
@@ -108,7 +110,7 @@ export function build(src: string): BuildResult {
 
   const openRaw = (tok: Token, rule: Rule): number => {
     const closeTag = `[/${tok.tag}]`;
-    const closeAt = src.indexOf(closeTag, tok.end);
+    const closeAt = scan.find(closeTag, tok.end);
     if (closeAt < 0) {
       events.push({
         kind: "unclosed",
@@ -121,7 +123,9 @@ export function build(src: string): BuildResult {
     }
     const content = src.slice(tok.end, closeAt);
     let problem = rule.checkRaw(content, tok.arg !== null);
-    if (!problem && rule.singleLine && /[\r\n]/.test(content)) problem = "newline";
+    if (!problem && rule.singleLine && nextNewline(scan.find, tok.end) < closeAt) {
+      problem = "newline";
+    }
     if (problem) {
       failedCloses.add(closeAt);
       const range: [number, number] = [tok.end, closeAt];
@@ -157,9 +161,9 @@ export function build(src: string): BuildResult {
         return tok.end;
       }
       if (rule.singleLine) {
-        const closeAt = src.indexOf(`[/${tok.tag}]`, tok.end);
+        const closeAt = scan.find(`[/${tok.tag}]`, tok.end);
         const empty = tok.tag === "url" && closeAt === tok.end;
-        if (closeAt < 0 || empty || /[\r\n]/.test(src.slice(tok.end, closeAt))) {
+        if (closeAt < 0 || empty || nextNewline(scan.find, tok.end) < closeAt) {
           events.push({
             kind: "unclosed",
             tag: tok.tag,
@@ -224,7 +228,7 @@ export function build(src: string): BuildResult {
   while (i < src.length) {
     const at = src.indexOf("[", i);
     if (at < 0) break;
-    const tok = scanToken(src, at);
+    const tok = scanToken(src, at, scan);
     if (!tok) {
       i = at + 1;
       continue;
