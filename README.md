@@ -163,13 +163,13 @@ interface TagSpec {
 | `color(text, value)` | `[color=value]text[/color]`. `value` is `#rgb`, `#rrggbb` or a color name; throws `TypeError` otherwise. |
 | `normalizeColor(value)` | `#abc` → `#aabbcc`, hex lowercased, names kept. Throws `TypeError` for anything else. |
 | `gradient(text, stops, { skipSpaces? })` | `{ bbcode, cost }`: one color per character, spread evenly over one or more hex `stops`. Neighbours with the same color share a tag; newlines are never colored; whitespace is skipped unless `skipSpaces: false`. `cost` is the characters the colors add. Emoji and other multi-code-point characters stay whole. |
-| `flag(code, { style? })` | `[img]<flag>[/img]` for a two-letter country code. `style`: `"modern"` (SVG, default) or `"legacy"` (old PNG). |
+| `flag(code, { style? })` | `[img]<flag>[/img]` for a two-letter country code. `style`: `"legacy"` (old PNG, small and a fixed size, default) or `"modern"` (SVG; it has no size of its own, so it fills the width it's shown in). |
 | `profile(idOrName, name?)` | A number is a user id: `[profile=2]peppy[/profile]` (name defaults to the id; osu! swaps in the current username when the post is saved). A string is a username: `[profile]peppy[/profile]`. |
 | `box(title, body)` | `[box=title]` with the body on its own lines, or `[spoilerbox]` when `title` is `null` or `""`. Throws `TypeError` for a title with a newline or unbalanced brackets. |
 | `list(items, { ordered?, title? })` | `[list]` (or `[list=1]`), an optional title line, one `[*]` line per item, `[/list]`. |
 | `escapeBBCode(text)` | The text with every tag osu! would read broken by a zero-width space after its `[`, so user input shows as typed. |
 
-osu! can't tell whether its image proxy passes SVG flags until you post; if a modern flag doesn't show, use `style: "legacy"`.
+Flags default to the old PNGs because they are small and have a fixed size. The modern SVGs have no size of their own, so they fill the width they are shown in, and nobody can tell whether osu!'s image proxy passes SVG until they post.
 
 ### `@haruhimemoe/bbcode/imagemap`
 

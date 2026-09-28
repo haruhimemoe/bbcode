@@ -30,7 +30,7 @@ assert.deepEqual(
 );
 assert.ok(TAGS.length > 20);
 assert.equal(gradient("ab", ["#000", "#fff"]).cost, 46);
-assert.equal(flag("us"), "[img]https://osu.ppy.sh/assets/images/flags/1f1fa-1f1f8.svg[/img]");
+assert.equal(flag("us"), "[img]https://assets.ppy.sh/old-flags/US.png[/img]");
 assert.equal(parseImagemap("\nhttps://a.b/i.png\n0 0 1 1 #\n").ok, true);
 assert.equal(COUNTRIES.length, 249);
 assert.equal(fillTemplate("{{a}}", [{ key: "a", label: "A", kind: "text" }], { a: "x" }).text, "x");

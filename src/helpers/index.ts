@@ -33,7 +33,10 @@ export function escapeBBCode(text: string): string {
 
 /** Options for `flag`. */
 export interface FlagOptions {
-  /** `"modern"` (default): osu!'s SVG flags. `"legacy"`: the old PNGs. */
+  /**
+   * `"legacy"` (default): the old PNGs, small and a fixed size. `"modern"`: osu!'s current SVG
+   * flags, which have no size of their own and fill the width of wherever they're shown.
+   */
   style?: FlagStyle;
 }
 
@@ -46,7 +49,7 @@ export interface FlagOptions {
  * @throws {TypeError} When `code` isn't two ASCII letters.
  */
 export function flag(code: string, options: FlagOptions = {}): string {
-  return `[img]${flagUrl(code, options.style ?? "modern")}[/img]`;
+  return `[img]${flagUrl(code, options.style ?? "legacy")}[/img]`;
 }
 
 /**

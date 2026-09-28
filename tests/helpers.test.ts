@@ -94,7 +94,10 @@ describe("gradient", () => {
 
 describe("flag, profile, box, list", () => {
   it("builds flag images", () => {
-    expect(flag("us")).toBe("[img]https://osu.ppy.sh/assets/images/flags/1f1fa-1f1f8.svg[/img]");
+    expect(flag("us")).toBe("[img]https://assets.ppy.sh/old-flags/US.png[/img]");
+    expect(flag("us", { style: "modern" })).toBe(
+      "[img]https://osu.ppy.sh/assets/images/flags/1f1fa-1f1f8.svg[/img]",
+    );
     expect(flag("JP", { style: "legacy" })).toBe(
       "[img]https://assets.ppy.sh/old-flags/JP.png[/img]",
     );

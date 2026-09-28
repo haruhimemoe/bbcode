@@ -39,7 +39,7 @@ describe("fillTemplate", () => {
     ["user", "124493", "[profile=124493]124493[/profile]"],
     ["users", "peppy\n\n2\n", "[profile]peppy[/profile]\n[profile=2]2[/profile]"],
     ["users", ["a", 3], "[profile]a[/profile]\n[profile=3]3[/profile]"],
-    ["country", "jp", "[img]https://osu.ppy.sh/assets/images/flags/1f1ef-1f1f5.svg[/img]"],
+    ["country", "jp", "[img]https://assets.ppy.sh/old-flags/JP.png[/img]"],
     ["color", "#F6A", "#ff66aa"],
   ] as const)("%s %j", (kind, value, expected) => {
     const result = fillTemplate("<{{ v }}>", [field("v", kind)], { v: value });

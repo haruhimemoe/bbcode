@@ -177,6 +177,14 @@
   padding-inline-start: 2em;
 }
 
+ul.bb-list {
+  list-style: disc;
+}
+
+ol.bb-list {
+  list-style: decimal;
+}
+
 .bb-img {
   max-width: 100%;
   height: auto;
