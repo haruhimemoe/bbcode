@@ -9,10 +9,29 @@
 
 import { escapeHtml, isEmail } from "../safety.js";
 
-/** A bare link candidate: after the start or whitespace, optionally behind `<.:([`. */
-const CANDIDATE = /(^|\s)([<.:([]*)((?:https?|ftp):\/\/\S+|www\.\S+|[A-Za-z0-9._%+-]+@\S+)/g;
-/** Characters osu! leaves out of the end of a bare link. */
-const TRAILING = /[.:)\]>]+$/;
+/**
+ * A bare link candidate: after the start or whitespace, optionally behind `<.:([`, then a word.
+ * The word is checked by `bareHref`; a pattern that also named what a link looks like would
+ * backtrack over long runs of dots, which a 60,000 character post can hold.
+ */
+const CANDIDATE = /(^|\s)([<.:([]*)(\S+)/g;
+
+/**
+ * Leaves out what osu! doesn't count as the end of a bare link: `. : ) ] >` and bracketed text
+ * like `[x]`, repeatedly. A loop, not a regex, so it stays linear on long runs.
+ */
+function trimTrailing(link: string): string {
+  let end = link.length;
+  while (end > 0) {
+    const ch = link.charAt(end - 1);
+    if (ch === "]") {
+      const open = link.indexOf("[", link.lastIndexOf("]", end - 2) + 1);
+      end = open >= 0 && open < end - 1 ? open : end - 1;
+    } else if (".:)>".includes(ch)) end--;
+    else break;
+  }
+  return link.slice(0, end);
+}
 
 /** Escapes text and turns newlines into `<br>`. */
 export function textHtml(text: string): string {
@@ -37,7 +56,7 @@ export function renderText(text: string, autolink: boolean): string {
   for (const m of text.matchAll(CANDIDATE)) {
     const lead = (m[1] as string) + (m[2] as string);
     const body = m[3] as string;
-    const link = body.replace(TRAILING, "");
+    const link = trimTrailing(body);
     const href = bareHref(link);
     if (href === null) continue;
     const at = (m.index as number) + lead.length;

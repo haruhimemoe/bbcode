@@ -172,6 +172,8 @@ describe("automatic links", () => {
     ["mail me@a.bc", `mail ${a("mailto:me@a.bc", "me@a.bc")}`],
     ["x@y and user@nodot", "x@y and user@nodot"],
     ["nohttp://a.b", "nohttp://a.b"],
+    ["see https://a.b[x]. ok", `see ${a("https://a.b")}[x]. ok`],
+    ["https://a.b/[x]y", a("https://a.b/[x]y")],
   ])("%s", (bb, expected) => {
     expect(html(bb)).toBe(expected);
   });
