@@ -10,7 +10,7 @@ Main exports: `parse(text)`, `serialize(doc)`, `render(textOrDoc, options?)`, `l
 - [Quick start](https://github.com/haruhimemoe/bbcode#quick-start): render a preview, lint, count
 - [API](https://github.com/haruhimemoe/bbcode#api): every export per subpath with its signature
 - [Supported tags](https://github.com/haruhimemoe/bbcode#supported-tags): each tag, its argument and what it renders
-- [Lint codes](https://github.com/haruhimemoe/bbcode#lint-codes): the eleven codes, severities and fixes
+- [Lint codes](https://github.com/haruhimemoe/bbcode#lint-codes): the twelve codes, severities and fixes
 - [Safety](https://github.com/haruhimemoe/bbcode#safety): what render checks, and what the proxy option must return
 - [Differences from osu!](https://github.com/haruhimemoe/bbcode#differences-from-osu): where output differs on purpose
 

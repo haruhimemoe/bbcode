@@ -33,6 +33,8 @@ export interface Ctx {
   readonly options: RenderOptions;
   /** Inside a link: no nested links, no automatic links. */
   readonly inLink: boolean;
+  /** Tags rendered around this point, box titles included; past LIMITS.nesting tags are text. */
+  readonly depth: number;
   /** Renders child nodes, eating newlines at the start and end as given. */
   readonly inner: (nodes: readonly Node[], ctx: Ctx, lead?: Eat, trail?: Eat) => string;
 }

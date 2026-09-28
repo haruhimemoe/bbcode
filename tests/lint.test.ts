@@ -85,6 +85,7 @@ describe("each code", () => {
       "[img]a[b[/img]",
       "[imagemap]\nx\n[/imagemap]",
       "[list]x[/list]",
+      "[quote]".repeat(101),
     ].join("\n");
     const codes = new Set(lint(text, { limit: 10 }).map((d) => d.code));
     expect([...codes].sort()).toEqual([...LINT_CODES].sort());

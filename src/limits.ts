@@ -22,6 +22,12 @@ export const LIMITS = Object.freeze({
   sizeMax: SIZE_MAX,
   /** The sizes osu!'s own editor offers. */
   sizePresets: Object.freeze([50, 85, 100, 150] as const),
+  /**
+   * How deep tags nest before the rest stay text. osu! has no such limit, but rendering and
+   * linting recurse, and a post's worth of nested tags would overflow a browser's stack. No real
+   * post comes near it.
+   */
+  nesting: 100,
 });
 
 /** The result of `count`. */

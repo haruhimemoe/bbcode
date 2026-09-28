@@ -19,6 +19,7 @@ export const LINT_CODES = Object.freeze([
   "imagemap-line",
   "list-no-items",
   "over-limit",
+  "too-deep",
 ] as const);
 
 /** One of `LINT_CODES`. */

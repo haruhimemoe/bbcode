@@ -136,7 +136,7 @@ Counts Unicode code points, tags included, against `limit` (default 60,000). Ret
 
 ### `LIMITS`
 
-`{ forumPost: 60000, userpage: 60000, beatmapDescription: 60000, sizeMin: 30, sizeMax: 200, sizePresets: [50, 85, 100, 150] }`. The userpage and beatmap descriptions are stored as forum posts, so they share the limit.
+`{ forumPost: 60000, userpage: 60000, beatmapDescription: 60000, sizeMin: 30, sizeMax: 200, sizePresets: [50, 85, 100, 150], nesting: 100 }`. The userpage and beatmap descriptions are stored as forum posts, so they share the limit. `nesting` is ours, not osu!'s: tags nested deeper than 100 (boxes inside box titles count too) stay text, so a post's worth of nested tags can't overflow the stack while rendering or linting.
 
 ### `TAGS` and `findTag(name: string): TagSpec | undefined`
 
@@ -287,6 +287,7 @@ Also like osu!:
 | `imagemap-line` | error | A line osu! would refuse (one diagnostic per line) | |
 | `list-no-items` | warning | A list without `[*]` | |
 | `over-limit` | error | Over the character limit; the range starts at the first character over | |
+| `too-deep` | warning | Tags nested more than `LIMITS.nesting` (100) deep; reported once, at the first tag kept as text | |
 
 ## Safety
 

@@ -8,6 +8,7 @@
  */
 
 import type { Document, Node, TagNode } from "../ast.js";
+import { LIMITS } from "../limits.js";
 import { flattenInto, openNode, pushNode, pushText } from "./nodes.js";
 import { type RawProblem, RULES, type Rule } from "./rules.js";
 import { scanToken, type Token } from "./scan.js";
@@ -24,6 +25,7 @@ export type ParseEvent =
   | { kind: "stray-close"; tag: string; start: number; end: number }
   | { kind: "self-nested"; tag: string; start: number; end: number }
   | { kind: "stray-item"; start: number; end: number }
+  | { kind: "too-deep"; tag: string; start: number; end: number }
   | {
       kind: "raw";
       tag: string;
@@ -83,6 +85,15 @@ export function build(src: string): BuildResult {
       events.push({ kind: "unclosed", tag: node.tag, start: node.start, end, reason });
     }
     flattenInto(top().children, node);
+  };
+
+  let deepSeen = false;
+  /** True (and noted once) when a tag at `tok` would nest past LIMITS.nesting. */
+  const tooDeep = (tok: Token): boolean => {
+    if (stack.length - 1 < LIMITS.nesting) return false;
+    if (!deepSeen) events.push({ kind: "too-deep", tag: tok.tag, start: tok.start, end: tok.end });
+    deepSeen = true;
+    return true;
   };
 
   const openRaw = (tok: Token, rule: Rule): number => {
@@ -150,6 +161,7 @@ export function build(src: string): BuildResult {
         }
       }
     }
+    if (tooDeep(tok)) return tok.end;
     flush(tok.start);
     push(openNode(rule.name, tok.tag, tok.arg, src, tok.start, tok.end));
     return tok.end;
@@ -171,6 +183,7 @@ export function build(src: string): BuildResult {
       events.push({ kind: "stray-item", start: tok.start, end: tok.end });
       return tok.end;
     }
+    if (name === "list" && tooDeep(tok)) return tok.end;
     flush(tok.start);
     if (name === "*") finish(tok.start, null);
     push(openNode("*", "*", null, src, tok.start, tok.end));

@@ -8,6 +8,7 @@
  */
 
 import type { Document, Node, TagNode } from "../ast.js";
+import { LIMITS } from "../limits.js";
 import { parse } from "../parse.js";
 import { escapeHtml } from "../safety.js";
 import { box, code, imagemap, list, quote, wrapper } from "./block.js";
@@ -40,7 +41,10 @@ const RENDERERS: Record<string, TagRenderer> = {
   imagemap,
 };
 
-function renderTag(node: TagNode, ctx: Ctx): string {
+function renderTag(node: TagNode, outer: Ctx): string {
+  // The parser caps nesting, but a box title is parsed on its own and can hold a box again.
+  if (outer.depth >= LIMITS.nesting) return asText(node);
+  const ctx = { ...outer, depth: outer.depth + 1 };
   const renderer = RENDERERS[node.name];
   if (renderer) return renderer(node, ctx);
   return simple(node, ctx) ?? asText(node);
@@ -74,7 +78,7 @@ function inner(nodes: readonly Node[], ctx: Ctx, lead: Eat = 0, trail: Eat = 0):
  */
 export function render(input: string | Document, options: RenderOptions = {}): string {
   const doc = typeof input === "string" ? parse(input.replace(/\r\n?/g, "\n")) : input;
-  const ctx: Ctx = { options, inLink: false, inner };
+  const ctx: Ctx = { options, inLink: false, depth: 0, inner };
   const html = inner(doc.children, ctx);
   if (options.wrap === false) return html;
   const extra = options.className ? ` ${escapeHtml(options.className)}` : "";

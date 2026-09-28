@@ -103,6 +103,7 @@ describe("count and LIMITS", () => {
       sizeMin: 30,
       sizeMax: 200,
       sizePresets: [50, 85, 100, 150],
+      nesting: 100,
     });
     expect(Object.isFrozen(root.LIMITS)).toBe(true);
   });

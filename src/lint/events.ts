@@ -7,6 +7,7 @@
  * @modified Mon Sep 28, 2026
  */
 
+import { LIMITS } from "../limits.js";
 import type { ParseEvent } from "../parser/build.js";
 import type { Diagnostic } from "./types.js";
 
@@ -81,6 +82,13 @@ export function eventDiagnostics(events: readonly ParseEvent[], src: string): Di
           code: "self-nested",
           severity: "warning",
           message: `[${e.tag}] inside another [${e.tag}] doesn't work on osu!: the inner one shows as text and the outer one ends at the first [/${e.tag}].`,
+          ...at,
+        };
+      case "too-deep":
+        return {
+          code: "too-deep",
+          severity: "warning",
+          message: `Tags nest more than ${LIMITS.nesting} deep from here, so the preview shows the rest as text.`,
           ...at,
         };
       default:
