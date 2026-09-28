@@ -1,0 +1,233 @@
+/*
+ * @haruhimemoe/bbcode/styles.css
+ * Styles for render() output (class prefix bb-). Dark by default, in the spirit of osu!'s own
+ * pages; add the class bb--light to the root (or render with { className: "bb--light" }) for a
+ * light variant. Written from scratch for this package. MIT.
+ */
+
+.bb {
+  --bb-text: #e6e1eb;
+  --bb-muted: #a59fb0;
+  --bb-bg: #2a2630;
+  --bb-surface: #37323f;
+  --bb-surface-strong: #443d4e;
+  --bb-border: #4e4658;
+  --bb-link: #ff8ec6;
+  --bb-link-hover: #ffb8dc;
+  --bb-code-bg: #1f1c24;
+  --bb-spoiler: #111014;
+  --bb-quote-bar: #6c6478;
+  --bb-radius: 6px;
+
+  color: var(--bb-text);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.bb.bb--light {
+  --bb-text: #26222c;
+  --bb-muted: #6b6475;
+  --bb-bg: #ffffff;
+  --bb-surface: #f3f0f6;
+  --bb-surface-strong: #e7e2ec;
+  --bb-border: #d6d0de;
+  --bb-link: #c2186b;
+  --bb-link-hover: #e0287f;
+  --bb-code-bg: #f6f4f8;
+  --bb-spoiler: #26222c;
+  --bb-quote-bar: #b9b1c4;
+}
+
+.bb a {
+  color: var(--bb-link);
+  text-decoration: none;
+}
+
+.bb a:hover {
+  color: var(--bb-link-hover);
+  text-decoration: underline;
+}
+
+.bb strong {
+  font-weight: 700;
+}
+
+.bb-spoiler {
+  background: var(--bb-spoiler);
+  color: var(--bb-spoiler);
+  border-radius: 2px;
+  transition: color 0.15s ease;
+}
+
+.bb-spoiler:hover,
+.bb-spoiler:focus-within {
+  color: var(--bb-text);
+}
+
+.bb--light .bb-spoiler:hover,
+.bb--light .bb-spoiler:focus-within {
+  color: #ffffff;
+}
+
+.bb-heading {
+  margin: 0.6em 0 0.3em;
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.bb-align--centre {
+  text-align: center;
+}
+
+.bb-align--left {
+  text-align: left;
+}
+
+.bb-align--right {
+  text-align: right;
+}
+
+.bb-c,
+.bb-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  background: var(--bb-code-bg);
+  border-radius: 4px;
+}
+
+.bb-c {
+  padding: 0.1em 0.35em;
+}
+
+.bb-code {
+  margin: 0.5em 0;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  white-space: pre;
+  border: 1px solid var(--bb-border);
+}
+
+.bb-notice {
+  margin: 0.5em 0;
+  padding: 0.75em 1em;
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+}
+
+.bb-box {
+  margin: 0.25em 0;
+}
+
+.bb-box__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--bb-link);
+  list-style: none;
+}
+
+.bb-box__title::-webkit-details-marker {
+  display: none;
+}
+
+.bb-box__title::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-block: 0.3em solid transparent;
+  border-inline-start: 0.45em solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+.bb-box[open] > .bb-box__title::before {
+  transform: rotate(90deg);
+}
+
+.bb-box__body {
+  margin: 0.25em 0 0.25em 0.3em;
+  padding: 0.25em 0 0.25em 0.9em;
+  border-inline-start: 2px solid var(--bb-border);
+}
+
+.bb-quote {
+  margin: 0.5em 0;
+  padding: 0.5em 1em;
+  background: var(--bb-surface);
+  border-inline-start: 4px solid var(--bb-quote-bar);
+  border-radius: 0 var(--bb-radius) var(--bb-radius) 0;
+}
+
+.bb-quote__author {
+  margin-bottom: 0.25em;
+  font-weight: 600;
+  color: var(--bb-muted);
+}
+
+.bb-list__title {
+  margin-top: 0.25em;
+}
+
+.bb-list {
+  margin: 0.25em 0;
+  padding-inline-start: 2em;
+}
+
+.bb-img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.bb-audio {
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.bb-youtube {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--bb-radius);
+}
+
+.bb-imagemap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.bb-imagemap__image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.bb-imagemap__link {
+  position: absolute;
+  display: block;
+}
+
+.bb-imagemap:hover .bb-imagemap__link {
+  outline: 1px dashed rgb(255 255 255 / 45%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.bb-imagemap__link:hover,
+.bb-imagemap__link:focus-visible {
+  outline: 2px solid var(--bb-link);
+  background: rgb(255 142 198 / 18%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-spoiler,
+  .bb-box__title::before {
+    transition: none;
+  }
+}
