@@ -1,6 +1,6 @@
 {
   "name": "@haruhimemoe/bbcode",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Parse, render, lint and count osu! BBCode the way osu! does. Safe HTML, template fields, flags, imagemaps and gradients. No dependencies.",
   "keywords": [
     "osu",

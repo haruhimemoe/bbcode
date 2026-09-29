@@ -30,12 +30,13 @@
 | `src/render/` | `index.ts` (`render`), `inline.ts`, `block.ts`, `text.ts` (escaping, automatic links), `eat.ts` (newline eating), `context.ts` (`RenderOptions`). |
 | `src/lint/` | `index.ts` (`lint`, `applyFix`), `events.ts`, `tree.ts`, `scan.ts`, `colors.ts`, `types.ts`. |
 | `src/limits.ts` | `LIMITS` and `count`. |
+| `src/layout.ts` | `OSU_WIDTHS` and `OSU_FONT_SIZES`: osu!'s desktop content widths and font sizes, measured from osu-web's stylesheets (facts only, no copied CSS). |
 | `src/helpers/` | `./helpers`: `color.ts` (color, gradient), `index.ts` (flag, profile, box, list, escapeBBCode). |
 | `src/imagemap/` | `./imagemap`: parse, validate, serialize. |
 | `src/flags/` | `./flags`: `countries.ts` (data), `url.ts` (flag URLs), `index.ts`. |
 | `src/template/` | `./template`: `index.ts` (fill, fields), `format.ts` (values by kind). |
 | `src/styles.css` | `./styles.css`. The build copies it to `dist/`. |
-| `tests/` | Vitest: `render`, `safety`, `parse`, `roundtrip`, `lint`, `imagemap`, `helpers`, `flags`, `template`, `api`, `nesting` (deep input), `performance` (hostile input stays linear). |
+| `tests/` | Vitest: `render`, `safety`, `parse`, `roundtrip`, `lint`, `imagemap`, `helpers`, `flags`, `template`, `api`, `layout`, `styles`, `nesting` (deep input), `performance` (hostile input stays linear). |
 | `scripts/smoke.mjs` | Imports the built package through its exports map (`bun run test:dist`). |
 | `scripts/check-consumer.mjs` | Packs the package, installs it in a temp project, then typechecks and runs a strict consumer (`bun run check:consumer`). |
 | `.github/workflows/` | `ci.yml` (checks, coverage, dist on Node 22.12 and 24, consumer) and `release.yml` (publishes on a GitHub release). |

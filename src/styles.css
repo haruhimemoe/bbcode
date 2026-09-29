@@ -124,7 +124,7 @@
 .bb-box__title {
   display: inline-flex;
   align-items: center;
-  gap: 0.4em;
+  gap: 0;
   cursor: pointer;
   font-weight: 600;
   color: var(--bb-link);
@@ -141,6 +141,8 @@
   height: 0;
   border-block: 0.3em solid transparent;
   border-inline-start: 0.45em solid currentColor;
+  /* The marker and this margin take 20px, so the title's text starts where the body does. */
+  margin-inline-end: calc(20px - 0.45em);
   transition: transform 0.15s ease;
 }
 
@@ -148,10 +150,10 @@
   transform: rotate(90deg);
 }
 
+/* osu!'s spacing: 10px under the title, the body indented 20px, no rule beside it. */
 .bb-box__body {
-  margin: 0.25em 0 0.25em 0.3em;
-  padding: 0.25em 0 0.25em 0.9em;
-  border-inline-start: 2px solid var(--bb-border);
+  margin: 10px 0 0;
+  padding: 0 0 0 20px;
 }
 
 .bb-quote {

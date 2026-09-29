@@ -23,6 +23,8 @@ describe("exports", () => {
       [
         "LIMITS",
         "LINT_CODES",
+        "OSU_FONT_SIZES",
+        "OSU_WIDTHS",
         "TAGS",
         "applyFix",
         "count",

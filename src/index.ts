@@ -7,6 +7,7 @@
  */
 
 export type { Document, Node, TagNode, TextNode } from "./ast.js";
+export { OSU_FONT_SIZES, OSU_WIDTHS } from "./layout.js";
 export { type Count, count, LIMITS } from "./limits.js";
 export {
   applyFix,

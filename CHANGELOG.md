@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-28
+
+### Added
+
+- `OSU_WIDTHS` (`userpage` 890, `forum` 750, `beatmap` 430) and `OSU_FONT_SIZES` (14, 14, 12): the column width and font size, in px, osu! shows BBCode at on desktop. A preview drawn at these and scaled to fit wraps lines and image rows where osu! does.
+
+### Changed
+
+- `styles.css` spaces boxes as osu! does: the body sits 10px under the title, indented 20px, without the rule beside it, and the title's text lines up with the body.
+
 ## [0.2.1] - 2026-09-28
 
 ### Fixed
@@ -42,7 +52,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./flags`: `COUNTRIES` (ISO 3166-1 alpha-2), `findCountry`, `searchCountries`, `flagUrl` and `normalizeCountryCode`.
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
-[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/haruhimemoe/bbcode/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/haruhimemoe/bbcode/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/haruhimemoe/bbcode/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/haruhimemoe/bbcode/releases/tag/v0.1.0

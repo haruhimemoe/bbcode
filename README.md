@@ -59,7 +59,7 @@ Five entry points and a stylesheet:
 
 | Import | What's in it |
 | --- | --- |
-| `@haruhimemoe/bbcode` | `parse`, `serialize`, `render`, `lint`, `applyFix`, `count`, `LIMITS`, `TAGS`, `findTag`, `LINT_CODES` |
+| `@haruhimemoe/bbcode` | `parse`, `serialize`, `render`, `lint`, `applyFix`, `count`, `LIMITS`, `OSU_WIDTHS`, `OSU_FONT_SIZES`, `TAGS`, `findTag`, `LINT_CODES` |
 | `@haruhimemoe/bbcode/helpers` | `color`, `normalizeColor`, `gradient`, `flag`, `profile`, `box`, `list`, `escapeBBCode` |
 | `@haruhimemoe/bbcode/imagemap` | `parseImagemap`, `validateImagemap`, `serializeImagemap`, `formatPercent` |
 | `@haruhimemoe/bbcode/flags` | `COUNTRIES`, `findCountry`, `searchCountries`, `flagUrl`, `normalizeCountryCode` |
@@ -137,6 +137,18 @@ Counts Unicode code points, tags included, against `limit` (default 60,000). Ret
 ### `LIMITS`
 
 `{ forumPost: 60000, userpage: 60000, beatmapDescription: 60000, sizeMin: 30, sizeMax: 200, sizePresets: [50, 85, 100, 150], nesting: 100 }`. The userpage and beatmap descriptions are stored as forum posts, so they share the limit. `nesting` is ours, not osu!'s: tags nested deeper than 100 (boxes inside box titles count too) stay text, so a post's worth of nested tags can't overflow the stack while rendering or linting.
+
+### `OSU_WIDTHS` and `OSU_FONT_SIZES`
+
+`OSU_WIDTHS` is `{ userpage: 890, forum: 750, beatmap: 430 }`: the width in px of the column osu! shows BBCode in on desktop, for a userpage, a forum post and a beatmap description. `OSU_FONT_SIZES` is `{ userpage: 14, forum: 14, beatmap: 12 }`, the font size in px in each. Render a preview at these sizes and scale it down to fit (CSS `zoom`), instead of letting it reflow in a narrower box, and text and rows of images wrap where they do on osu!. They were measured from osu!'s site in September 2026; a later release updates them if osu!'s layout changes.
+
+```ts
+import { OSU_WIDTHS, OSU_FONT_SIZES } from "@haruhimemoe/bbcode";
+
+canvas.style.width = `${OSU_WIDTHS.userpage}px`;
+canvas.style.fontSize = `${OSU_FONT_SIZES.userpage}px`;
+canvas.style.zoom = String(Math.min(1, pane.clientWidth / OSU_WIDTHS.userpage));
+```
 
 ### `TAGS` and `findTag(name: string): TagSpec | undefined`
 
@@ -233,7 +245,7 @@ An empty value falls back to `default`; an empty required field is an error. A f
 
 ### `@haruhimemoe/bbcode/styles.css`
 
-Styles for everything `render` outputs. Dark by default; add `bb--light` to the root (`render(text, { className: "bb--light" })`) for a light version. Colors are CSS custom properties on `.bb` (`--bb-text`, `--bb-link`, `--bb-surface`...), so you can retheme without overriding rules.
+Styles for everything `render` outputs. Dark by default; add `bb--light` to the root (`render(text, { className: "bb--light" })`) for a light version. Colors are CSS custom properties on `.bb` (`--bb-text`, `--bb-link`, `--bb-surface`...), so you can retheme without overriding rules. Box bodies are indented 20px, 10px under their title, as on osu!.
 
 ## Supported tags
 
