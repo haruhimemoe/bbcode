@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-28
+
+### Fixed
+
+- `styles.css` sets `.bb-img` to `display: inline` with baseline alignment, as osu! shows images. Under a reset that makes every `img` a block (Tailwind's preflight), images written side by side, like a collab row, stacked one under another.
+
 ## [0.2.0] - 2026-09-28
 
 ### Added
@@ -36,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./flags`: `COUNTRIES` (ISO 3166-1 alpha-2), `findCountry`, `searchCountries`, `flagUrl` and `normalizeCountryCode`.
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
-[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/haruhimemoe/bbcode/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/haruhimemoe/bbcode/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/haruhimemoe/bbcode/releases/tag/v0.1.0

@@ -185,10 +185,13 @@ ol.bb-list {
   list-style: decimal;
 }
 
+/* Inline at their own size, as on osu!, so images written side by side (collab rows) stay on one
+   line. display is set because Tailwind's preflight makes every img a block. */
 .bb-img {
+  display: inline;
   max-width: 100%;
   height: auto;
-  vertical-align: middle;
+  vertical-align: baseline;
 }
 
 .bb-audio {
