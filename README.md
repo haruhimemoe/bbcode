@@ -343,4 +343,4 @@ Written from osu!'s observed behavior. No code, styles or text from osu-web or t
 - [CHANGELOG.md](CHANGELOG.md) for release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and how to submit a change
 - [SECURITY.md](SECURITY.md) to report a vulnerability
-- [haruhime.moe Discord server](https://discord.gg/bKy9kjMV4y) for questions and feedback
+- [haruhime.moe Discord server](https://haruhime.moe/discord) for questions and feedback
