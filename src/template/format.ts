@@ -59,7 +59,14 @@ function scalar(kind: FieldKind, value: string | number): string {
       return text.trim() !== "" && Number.isFinite(n) ? String(n) : fail("Enter a number.");
     }
     case "date": {
-      const ok = /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text));
+      // Date.parse rolls 2026-02-31 over to March, so the parts have to round-trip.
+      const [y, m, d] = text.split("-").map(Number) as [number, number, number];
+      const day = new Date(Date.UTC(y, m - 1, d));
+      const ok =
+        /^\d{4}-\d{2}-\d{2}$/.test(text) &&
+        day.getUTCFullYear() === y &&
+        day.getUTCMonth() === m - 1 &&
+        day.getUTCDate() === d;
       return ok ? text : fail("Enter a date as YYYY-MM-DD.");
     }
     case "url":
