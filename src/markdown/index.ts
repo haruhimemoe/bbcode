@@ -6,6 +6,7 @@
  * @modified Sun Oct 11, 2026
  */
 
+export { toMarkdown } from "./to-markdown.js";
 export {
   type Conversion,
   type FromMarkdownOptions,

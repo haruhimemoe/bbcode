@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { parse } from "../src/index.js";
 import { escapeMarkdown } from "../src/markdown/escape.js";
-import { LOSS_CODES } from "../src/markdown/index.js";
+import { LOSS_CODES, toMarkdown } from "../src/markdown/index.js";
 
 describe("markdown basics", () => {
   it("freezes the loss codes", () => {
@@ -24,5 +25,58 @@ describe("markdown basics", () => {
     expect(escapeMarkdown("- x", true)).toBe("\\- x");
     expect(escapeMarkdown("1. x", true)).toBe("1\\. x");
     expect(escapeMarkdown("a # b", false)).toBe("a # b");
+  });
+});
+
+const md = (s: string) => toMarkdown(s).output;
+const codes = (s: string) => toMarkdown(s).lost.map((l) => l.code);
+
+describe("toMarkdown", () => {
+  it("handles empty input", () => {
+    expect(toMarkdown("")).toEqual({ output: "", lost: [] });
+  });
+  it("maps inline styles", () => {
+    expect(md("[b]a[/b] [i]b[/i] [s]c[/s] [strike]d[/strike]")).toBe("**a** *b* ~~c~~ ~~d~~");
+    expect(md("[c]x*y[/c]")).toBe("`x*y`");
+  });
+  it("maps blocks", () => {
+    expect(md("[heading]Rules[/heading]")).toBe("## Rules");
+    expect(md("[code]a\n*b[/code]")).toBe("```\na\n*b\n```");
+    expect(md('[quote="peppy"]hi[/quote]')).toBe("> **peppy** wrote:\n> hi");
+    expect(md("[list][*]a[*]b[/list]")).toBe("- a\n- b");
+    expect(md("[list=1][*]a[*]b[/list]")).toBe("1. a\n2. b");
+  });
+  it("maps links and media", () => {
+    expect(md("[url=https://x.y]t[/url]")).toBe("[t](https://x.y)");
+    expect(md("[url]https://x.y[/url]")).toBe("<https://x.y>");
+    expect(md("[email]a@b.c[/email]")).toBe("<mailto:a@b.c>");
+    expect(md("[img]https://i.y/a.png[/img]")).toBe("![](https://i.y/a.png)");
+    expect(md("[profile]peppy[/profile]")).toBe("[peppy](https://osu.ppy.sh/users/peppy)");
+    expect(md("[youtube]abc[/youtube]")).toBe("<https://www.youtube.com/watch?v=abc>");
+  });
+  it("keeps children and reports tags with no markdown form", () => {
+    const r = toMarkdown("[color=red]x[/color][u]y[/u]");
+    expect(r.output).toBe("xy");
+    expect(r.lost).toEqual([
+      expect.objectContaining({ code: "no-equivalent", start: 0, end: 20 }),
+      expect.objectContaining({ code: "no-equivalent", start: 20, end: 28 }),
+    ]);
+    expect(codes("[size=150]a[/size][spoiler]b[/spoiler][centre]c[/centre]")).toEqual([
+      "no-equivalent",
+      "no-equivalent",
+      "no-equivalent",
+    ]);
+  });
+  it("renders boxes by option", () => {
+    expect(md("[box=T]x[/box]")).toBe("**T**\n\nx");
+    expect(toMarkdown("[box=T]x[/box]", { boxStyle: "quote" }).output).toBe("> **T**\n> x");
+    expect(codes("[box=T]x[/box]")).toEqual(["no-equivalent"]);
+  });
+  it("escapes text so it stays text", () => {
+    expect(md("a*b")).toBe("a\\*b");
+    expect(md("# not heading")).toBe("\\# not heading");
+  });
+  it("accepts a parsed document", () => {
+    expect(toMarkdown(parse("[b]a[/b]")).output).toBe("**a**");
   });
 });
