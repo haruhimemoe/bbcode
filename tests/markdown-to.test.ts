@@ -79,4 +79,18 @@ describe("toMarkdown", () => {
   it("accepts a parsed document", () => {
     expect(toMarkdown(parse("[b]a[/b]")).output).toBe("**a**");
   });
+  it("renders notice as a quote, with a loss", () => {
+    expect(md("[notice]hi[/notice]")).toBe("> hi");
+    expect(codes("[notice]hi[/notice]")).toEqual(["no-equivalent"]);
+  });
+  it("renders [c] as a backtick span over plain text, flattening nested tags", () => {
+    const r = toMarkdown("[c]a[i]b[/i]c[/c]");
+    expect(r.output).toBe("`abc`");
+    expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent" })]);
+    expect(md("[c]a`b[/c]")).toBe("``a`b``");
+  });
+  it("renders spoilerbox like box, with a loss", () => {
+    expect(md("[spoilerbox]x[/spoilerbox]")).toBe("**Spoiler**\n\nx");
+    expect(codes("[spoilerbox]x[/spoilerbox]")).toEqual(["no-equivalent"]);
+  });
 });

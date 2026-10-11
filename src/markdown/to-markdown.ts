@@ -12,7 +12,7 @@ import { escapeMarkdown } from "./escape.js";
 import type { Conversion, Loss, ToMarkdownOptions } from "./types.js";
 
 const WRAP: Record<string, string> = { b: "**", i: "*", s: "~~" };
-const DROPPED = new Set(["u", "color", "size", "spoiler", "centre", "left", "right", "notice"]);
+const DROPPED = new Set(["u", "color", "size", "spoiler", "centre", "left", "right"]);
 
 type Ctx = { lost: Loss[]; boxStyle: "bold-title" | "quote" };
 
@@ -26,7 +26,25 @@ const lose = (ctx: Ctx, node: TagNode, what: string): void => {
 };
 
 const rawText = (node: TagNode): string =>
-  node.children.map((c) => (c.type === "text" ? c.value : c.open)).join("");
+  node.children
+    .map((c) => (c.type === "text" ? c.value : c.open + rawText(c) + (c.close ?? "")))
+    .join("");
+
+/** Plain text of `nodes`, recursing into any tag children. Sets `state.hasTag` if one is found. */
+const plainText = (nodes: Node[], state: { hasTag: boolean }): string =>
+  nodes
+    .map((n) => {
+      if (n.type === "text") return n.value;
+      state.hasTag = true;
+      return plainText(n.children, state);
+    })
+    .join("");
+
+/** Longest run of backticks in `text`, so a fence can always be one longer. */
+const longestBacktickRun = (text: string): number => {
+  const runs = text.match(/`+/g);
+  return runs ? Math.max(...runs.map((r) => r.length)) : 0;
+};
 
 const prefix = (text: string, mark: string): string =>
   text
@@ -64,14 +82,31 @@ const tag = (node: TagNode, ctx: Ctx, lineStart: boolean): string => {
   switch (node.name) {
     case "heading":
       return `## ${inline(node.children, ctx, false)}`;
-    case "c":
-      return `\`${rawText(node)}\``;
+    case "c": {
+      const state = { hasTag: false };
+      const text = plainText(node.children, state);
+      if (state.hasTag) {
+        ctx.lost.push({
+          code: "no-equivalent",
+          message: "formatting inside [c] dropped",
+          start: node.start,
+          end: node.end,
+        });
+      }
+      const fence = "`".repeat(longestBacktickRun(text) + 1);
+      return `${fence}${text}${fence}`;
+    }
     case "code":
       return `\`\`\`\n${rawText(node).replace(/^\n|\n$/g, "")}\n\`\`\``;
     case "quote": {
       const body = inline(node.children, ctx, true).trim();
       const head = node.arg ? `**${node.arg}** wrote:\n` : "";
       return prefix(head + body, "> ");
+    }
+    case "notice": {
+      lose(ctx, node, "the text");
+      const body = inline(node.children, ctx, true).trim();
+      return prefix(body, "> ");
     }
     case "list":
       return listItems(node, ctx);
@@ -91,9 +126,10 @@ const tag = (node: TagNode, ctx: Ctx, lineStart: boolean): string => {
       return `<https://www.youtube.com/watch?v=${rawText(node)}>`;
     case "audio":
       return `<${rawText(node)}>`;
-    case "box": {
+    case "box":
+    case "spoilerbox": {
       lose(ctx, node, "the title and text");
-      const title = node.arg ?? "";
+      const title = node.name === "box" ? (node.arg ?? "") : "Spoiler";
       const body = inline(node.children, ctx, true).trim();
       return ctx.boxStyle === "quote"
         ? prefix(`**${title}**\n${body}`, "> ")
