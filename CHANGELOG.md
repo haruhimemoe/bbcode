@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `./markdown`: `toMarkdown` and `fromMarkdown`, with a `lost` report of what the other format can't say.
+- `./markdown`: `toMarkdown` and `fromMarkdown`, with a `lost` report of what the other format can't say. Emphasis follows a simplified CommonMark, with no "rule of 3" for telling `*`/`_` delimiter runs apart. Typed BBCode written inside markdown passes through as is; `fromMarkdown` lints its own output afterward and reports any problem osu! would have with that BBCode as a `no-equivalent` loss instead of shipping it broken.
 
 ## [0.2.3] - 2026-10-10
 

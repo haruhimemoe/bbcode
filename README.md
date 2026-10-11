@@ -276,7 +276,9 @@ Behaviors worth knowing:
 - Link and image URLs are limited to the schemes osu! accepts (`http`, `https`, `ftp` for links; `http`, `https` for images). Anything else keeps the link text or alt text and reports a loss.
 - `[`, `]` and spaces in a URL are percent-encoded, since osu! reads them literally and `[`/`]` can cut a `[url=...]` argument short.
 - Content nested deeper than `LIMITS.nesting` (100) is kept as text, with a loss, instead of recursing further.
-- `LOSS_CODES`: `no-equivalent`, `table`, `html`, `nested-list-flattened`, `heading-level`, `footnote`, `reference-link-unresolved`.
+- Emphasis follows a simplified CommonMark: no "rule of 3" for picking `*`/`_` delimiter runs apart.
+- Typed BBCode written inside markdown passes through as-is; `fromMarkdown` then lints its own output, and any problem osu! would have with that BBCode comes back as a `no-equivalent` loss instead of silently shipping broken markup.
+- `LOSS_CODES`: `no-equivalent`, `table`, `html`, `heading-level`, `footnote`, `reference-link-unresolved`.
 - Not full CommonMark: it targets GitHub/Discord-style markdown (GFM strikethrough, autolinks, tables), not every CommonMark edge case.
 - No dependencies, like the rest of the package.
 
