@@ -37,6 +37,13 @@ const lose = (ctx: Ctx, code: Loss["code"], message: string, start: number, end:
 const encodeHref = (href: string): string =>
   href.replace(/[[\] ]/g, (c) => (c === " " ? "%20" : c === "[" ? "%5B" : "%5D"));
 
+// Scheme-only checks, deliberately not src/safety.ts's isLinkUrl/isMediaUrl: those also demand
+// isClean (no whitespace), but a markdown href can legitimately carry a space or `[`/`]` (an
+// angle-bracket destination, or an escaped bracket) that encodeHref percent-encodes below. What
+// actually determines whether osu! accepts the tag is the scheme, checked before encoding.
+const LINK_SCHEME = /^(?:https?|ftp):\/\/./i;
+const MEDIA_SCHEME = /^https?:\/\/./i;
+
 const inlineOf = (n: MdInline, ctx: Ctx): string => {
   switch (n.kind) {
     case "text":
@@ -65,6 +72,16 @@ const inlineOf = (n: MdInline, ctx: Ctx): string => {
     case "break":
       return "\n";
     case "image":
+      if (!MEDIA_SCHEME.test(n.src)) {
+        lose(
+          ctx,
+          "no-equivalent",
+          "[img] needs an http:// or https:// URL; kept the alt text.",
+          n.start,
+          n.end,
+        );
+        return n.alt;
+      }
       return `[img]${encodeHref(n.src)}[/img]`;
     case "html":
       lose(ctx, "html", "HTML has no BBCode form, kept as text.", n.start, n.end);
@@ -72,6 +89,16 @@ const inlineOf = (n: MdInline, ctx: Ctx): string => {
     case "link": {
       const label = inline(n.children, ctx);
       if (n.href.startsWith("mailto:")) return `[email]${n.href.slice(7)}[/email]`;
+      if (!LINK_SCHEME.test(n.href)) {
+        lose(
+          ctx,
+          "no-equivalent",
+          "[url] needs an http://, https:// or ftp:// link; kept the link text.",
+          n.start,
+          n.end,
+        );
+        return label;
+      }
       const href = encodeHref(n.href);
       return label === n.href ? `[url]${href}[/url]` : `[url=${href}]${label}[/url]`;
     }
