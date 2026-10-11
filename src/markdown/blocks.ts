@@ -24,7 +24,9 @@ const ORDERED = /^( {0,3})(\d{1,9})[.)]( +|$)/;
 const QUOTE = /^ {0,3}> ?/;
 const SETEXT = /^ {0,3}(=+|-+)[ \t]*$/;
 const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
-const HTML_OPEN = /^ {0,3}<(\/?[a-zA-Z][\w-]*|!--)/;
+// A tag name must end at whitespace, `/`, `>` or end of line, so an autolink like
+// `<https://x.y>` or `<mailto:a@b.c>` (scheme immediately followed by `:`) doesn't qualify.
+const HTML_OPEN = /^ {0,3}<(\/?[a-zA-Z][\w-]*(?=[\s/>]|$)|!--)/;
 
 const splitLines = (source: string): Line[] => {
   const lines: Line[] = [];
