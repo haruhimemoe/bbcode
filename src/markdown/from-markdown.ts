@@ -151,7 +151,11 @@ const blockOf = (b: MdBlock, ctx: Ctx): string => {
           b.start,
           b.end,
         );
-        return ctx.source.slice(b.start, b.end);
+        // Trimmed here, once, on a direct slice of the flat source: cheap. Deferring this to
+        // every ancestor list/quote level (as blockOf used to, via `.trim()` on each level's
+        // already-assembled result) forces V8 to flatten that whole rope to inspect it, once per
+        // level, turning a capped (and possibly huge) hostile payload into O(maxDepth * size).
+        return ctx.source.slice(b.start, b.end).trim();
       }
       return textOf(b.text, b.textStart, ctx);
     case "heading": {
@@ -174,7 +178,10 @@ const blockOf = (b: MdBlock, ctx: Ctx): string => {
     case "quote":
       return `[quote]${blocks(b.children, ctx)}[/quote]`;
     case "list": {
-      const items = b.items.map((item) => `[*]${blocks(item, ctx).trim()}`).join("\n");
+      // No .trim() here: every blockOf branch already returns clean-edged text (tags, or text
+      // trimmed at its own source above), so trimming the composed per-item string again would
+      // just re-flatten it at every ancestor list/quote level for no benefit.
+      const items = b.items.map((item) => `[*]${blocks(item, ctx)}`).join("\n");
       return `[list${b.ordered ? "=1" : ""}]\n${items}\n[/list]`;
     }
     case "code":
@@ -192,11 +199,18 @@ const blockOf = (b: MdBlock, ctx: Ctx): string => {
   }
 };
 
+// Collapsing runs/{3,} newlines is a top-level concern, not a per-container one: blockOf
+// recurses into blocks() once per quote/list nesting level (up to maxDepth deep), and running
+// the replace at every level re-scans that whole (possibly huge) subtree's text on every level
+// instead of once, which turns hostile nesting into O(maxDepth * size) work. blocks() just joins;
+// fromMarkdown collapses once over the finished output.
+// Array.prototype.join (unlike `+` or a template literal) eagerly flattens a rope-backed string
+// argument of 2+ elements instead of leaving it as a lazy ConsString; reduce() with `+` keeps the
+// concatenation lazy. A list item that's deeply right-nested (hostile input, or an ordinary list
+// whose body starts with a paragraph before its sub-list) otherwise re-flattens its own, possibly
+// huge, rendered subtree on every ancestor level: O(maxDepth * size) instead of O(size).
 const blocks = (list: MdBlock[], ctx: Ctx): string =>
-  list
-    .map((b) => blockOf(b, ctx))
-    .join("\n\n")
-    .replace(/\n{3,}/g, "\n\n");
+  list.map((b) => blockOf(b, ctx)).reduce((acc, s, i) => (i === 0 ? s : `${acc}\n\n${s}`), "");
 
 /**
  * Collects `[start, end]` of every fenced/indented code block in `list`, recursing into quotes
@@ -252,18 +266,32 @@ export const fromMarkdown = (markdown: string, options: FromMarkdownOptions = {}
     source: markdown,
     codeRanges: [],
   };
+  // None of REF_DEF, FOOTNOTE_DEF or FOOTNOTE_REF can match without a literal `[` somewhere in
+  // the input, so a cheap indexOf (a native, optimized scan) skips three regex passes over
+  // hostile (tens-of-MB) input that has none. This also sidesteps a V8 regex-tiering quirk where
+  // running one of these patterns against a short string first measurably slows a later run
+  // against a huge one on the very same regex object.
+  const hasBracket = markdown.includes("[");
+
   // Code blocks are found on the untouched input, before any definition is blanked out, so a
-  // definition written inside one is left exactly as written (finding 4).
-  const codeSkip = blockCodeRanges(parseBlocks(markdown, LIMITS.nesting));
+  // definition written inside one is left exactly as written (finding 4). codeSkip is only ever
+  // read by blankOut below, and blankOut only runs when hasBracket, so this whole extra parse
+  // (parseBlocks run a second time, just to locate code fences) is skippable whenever there's no
+  // `[` to blank around - the common case for hostile input with no brackets at all.
+  const codeSkip = hasBracket ? blockCodeRanges(parseBlocks(markdown, LIMITS.nesting)) : [];
 
   // Blank definitions in place (same length) so offsets still point into the input.
-  let source = blankOut(markdown, REF_DEF, codeSkip, (m) =>
-    ctx.refs.set((m[1] as string).trim().toLowerCase(), m[2] as string),
-  );
+  let source = hasBracket
+    ? blankOut(markdown, REF_DEF, codeSkip, (m) =>
+        ctx.refs.set((m[1] as string).trim().toLowerCase(), m[2] as string),
+      )
+    : markdown;
   const footnoteDefs: [number, number][] = [];
-  source = blankOut(source, FOOTNOTE_DEF, codeSkip, (m, offset) =>
-    footnoteDefs.push([offset, offset + (m[0] as string).length]),
-  );
+  source = hasBracket
+    ? blankOut(source, FOOTNOTE_DEF, codeSkip, (m, offset) =>
+        footnoteDefs.push([offset, offset + (m[0] as string).length]),
+      )
+    : source;
   ctx.source = source;
 
   // Each definition drops its own text (once); a reference that resolves to one of these spans
@@ -271,36 +299,45 @@ export const fromMarkdown = (markdown: string, options: FromMarkdownOptions = {}
   for (const [s, e] of footnoteDefs) {
     lose(ctx, "footnote", "osu! has no footnotes, dropped the note text.", s, e);
   }
-  for (const m of markdown.matchAll(FOOTNOTE_REF)) {
-    const at = m.index ?? 0;
-    const end = at + (m[0] as string).length;
-    if (insideAny(footnoteDefs, at, end)) continue;
-    lose(ctx, "footnote", "osu! has no footnotes, kept the marker as text.", at, end);
+  if (hasBracket) {
+    for (const m of markdown.matchAll(FOOTNOTE_REF)) {
+      const at = m.index ?? 0;
+      const end = at + (m[0] as string).length;
+      if (insideAny(footnoteDefs, at, end)) continue;
+      lose(ctx, "footnote", "osu! has no footnotes, kept the marker as text.", at, end);
+    }
   }
 
   const parsed = parseBlocks(source, LIMITS.nesting);
-  const output = blocks(parsed, ctx).trim();
+  const output = blocks(parsed, ctx)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   // Typed BBCode in the markdown passes through, and osu! has no escape for it: warn once per
   // top-level tag (its children sit inside the same span), except inside code. Both the tags
   // (siblings of a document, so already in increasing, non-overlapping order) and the code
   // ranges collected while emitting are sorted, so one pass with a single moving index covers
   // the whole document in O(n + m) instead of a range scan per tag.
-  const ranges = ctx.codeRanges.slice().sort((a, b) => a[0] - b[0]);
-  let ri = 0;
-  for (const node of parse(markdown).children) {
-    if (node.type !== "tag") continue;
-    while (ri < ranges.length && (ranges[ri] as [number, number])[1] <= node.start) ri++;
-    const range = ranges[ri];
-    const covered = range !== undefined && range[0] <= node.start && node.end <= range[1];
-    if (covered) continue;
-    lose(
-      ctx,
-      "no-equivalent",
-      "This looks like BBCode and osu! will show it as a tag.",
-      node.start,
-      node.end,
-    );
+  // A BBCode tag node can't exist without a `[` either, so this whole pass (parsing the raw
+  // markdown a third time, just to look for stray tags) is skippable under the same hasBracket
+  // guard as above.
+  if (hasBracket) {
+    const ranges = ctx.codeRanges.slice().sort((a, b) => a[0] - b[0]);
+    let ri = 0;
+    for (const node of parse(markdown).children) {
+      if (node.type !== "tag") continue;
+      while (ri < ranges.length && (ranges[ri] as [number, number])[1] <= node.start) ri++;
+      const range = ranges[ri];
+      const covered = range !== undefined && range[0] <= node.start && node.end <= range[1];
+      if (covered) continue;
+      lose(
+        ctx,
+        "no-equivalent",
+        "This looks like BBCode and osu! will show it as a tag.",
+        node.start,
+        node.end,
+      );
+    }
   }
   ctx.lost.sort((a, b) => a.start - b.start);
   return { output, lost: ctx.lost };
