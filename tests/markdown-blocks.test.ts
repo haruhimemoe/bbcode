@@ -74,4 +74,21 @@ describe("parseBlocks", () => {
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(200);
   });
+  it("ends a list item at an unindented heading, fence or rule", () => {
+    expect(kinds("- a\n# h")).toEqual(["list", "heading"]);
+    const [, h] = parseBlocks("- a\n# h", 32);
+    expect(h).toMatchObject({ kind: "heading", start: 4 });
+    expect(kinds("- a\n```\nx\n```")).toEqual(["list", "code"]);
+    expect(kinds("- a\n---")).toEqual(["list", "rule"]);
+  });
+  it("pads/truncates table rows to the header's column count", () => {
+    expect(parseBlocks("| a | b |\n|---|---|\n| 1 |\n| 1 | 2 | 3 |", 32)[0]).toMatchObject({
+      kind: "table",
+      rows: [
+        ["a", "b"],
+        ["1", ""],
+        ["1", "2"],
+      ],
+    });
+  });
 });

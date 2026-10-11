@@ -189,7 +189,16 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
             j++;
             continue;
           }
-          if (BULLET.test(next.text) || ORDERED.test(next.text) || QUOTE.test(next.text)) break;
+          if (
+            BULLET.test(next.text) ||
+            ORDERED.test(next.text) ||
+            QUOTE.test(next.text) ||
+            ATX.test(next.text) ||
+            FENCE.test(next.text) ||
+            RULE.test(next.text) ||
+            HTML_OPEN.test(next.text)
+          )
+            break;
           body.push({
             text: next.text.trimStart(),
             start: next.start + (next.text.length - next.text.trimStart().length),
@@ -229,14 +238,20 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
       continue;
     }
     if (text.includes("|") && lines[i + 1] && TABLE_SEP.test((lines[i + 1] as Line).text)) {
-      const rows = [cells(text)];
+      const header = cells(text);
+      const width = header.length;
+      const pad = (row: string[]): string[] =>
+        row.length === width
+          ? row
+          : [...row.slice(0, width), ...Array(Math.max(0, width - row.length)).fill("")];
+      const rows = [pad(header)];
       let j = i + 2;
       while (
         j < lines.length &&
         !blank(lines[j] as Line) &&
         (lines[j] as Line).text.includes("|")
       ) {
-        rows.push(cells((lines[j] as Line).text));
+        rows.push(pad(cells((lines[j] as Line).text)));
         j++;
       }
       out.push({ kind: "table", rows, start: line.start, end: endOf(lines[j - 1] as Line) });
