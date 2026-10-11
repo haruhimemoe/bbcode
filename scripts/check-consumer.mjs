@@ -48,6 +48,7 @@ import { box, gradient, type Gradient } from "@haruhimemoe/bbcode/helpers";
 import { type Imagemap, serializeImagemap } from "@haruhimemoe/bbcode/imagemap";
 import { type Country, findCountry } from "@haruhimemoe/bbcode/flags";
 import { fillTemplate, type TemplateField } from "@haruhimemoe/bbcode/template";
+import { type Conversion, fromMarkdown, LOSS_CODES, type LossCode } from "@haruhimemoe/bbcode/markdown";
 
 const source = "[box=Hi]\\n[b]x[/b]\\n[/box]";
 if (serialize(parse(source)) !== source) throw new Error("round trip");
@@ -63,7 +64,10 @@ const map: Imagemap = { image: "https://a.b/i.png", regions: [{ x: 0, y: 0, w: 1
 const country: Country | undefined = findCountry("us");
 const fields: TemplateField[] = [{ key: "a", label: "A", kind: "user" }];
 if (fillTemplate("{{a}}", fields, { a: 2 }).text !== "[profile=2]2[/profile]") throw new Error("template");
-void [bad, g, serializeImagemap(map), country, box(null, "x")];
+const c: Conversion = fromMarkdown("# a");
+const codes: readonly LossCode[] = LOSS_CODES;
+if (c.output !== "[heading]a[/heading]") throw new Error("markdown");
+void [bad, g, serializeImagemap(map), country, box(null, "x"), codes];
 console.log("consumer: ok");
 `,
   );

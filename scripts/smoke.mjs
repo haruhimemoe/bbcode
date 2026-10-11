@@ -17,6 +17,7 @@ const { gradient, flag } = await import("@haruhimemoe/bbcode/helpers");
 const { parseImagemap } = await import("@haruhimemoe/bbcode/imagemap");
 const { COUNTRIES } = await import("@haruhimemoe/bbcode/flags");
 const { fillTemplate } = await import("@haruhimemoe/bbcode/template");
+const { fromMarkdown, toMarkdown } = await import("@haruhimemoe/bbcode/markdown");
 
 const source = "[centre][b]hi[/b] [url]javascript:x[/url][/centre]\n";
 assert.equal(serialize(parse(source)), source);
@@ -34,10 +35,19 @@ assert.equal(flag("us"), "[img]https://assets.ppy.sh/old-flags/US.png[/img]");
 assert.equal(parseImagemap("\nhttps://a.b/i.png\n0 0 1 1 #\n").ok, true);
 assert.equal(COUNTRIES.length, 249);
 assert.equal(fillTemplate("{{a}}", [{ key: "a", label: "A", kind: "text" }], { a: "x" }).text, "x");
+assert.equal(toMarkdown("[b]a[/b]").output, "**a**");
+assert.equal(fromMarkdown("**a**").output, "[b]a[/b]");
 
 const css = fileURLToPath(import.meta.resolve("@haruhimemoe/bbcode/styles.css"));
 assert.ok(readFileSync(css, "utf8").includes(".bb-box"), "styles.css missing or empty");
-for (const sub of ["index", "helpers/index", "imagemap/index", "flags/index", "template/index"]) {
+for (const sub of [
+  "index",
+  "helpers/index",
+  "imagemap/index",
+  "flags/index",
+  "template/index",
+  "markdown/index",
+]) {
   assert.ok(
     existsSync(new URL(`../dist/${sub}.d.ts`, import.meta.url)),
     `dist/${sub}.d.ts missing`,

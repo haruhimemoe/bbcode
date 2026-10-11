@@ -55,7 +55,7 @@ const { bbcode, cost } = gradient("Summer Cup", ["#ff66aa", "#66aaff"]);
 
 ## API
 
-Five entry points and a stylesheet:
+Six entry points and a stylesheet:
 
 | Import | What's in it |
 | --- | --- |
@@ -64,6 +64,7 @@ Five entry points and a stylesheet:
 | `@haruhimemoe/bbcode/imagemap` | `parseImagemap`, `validateImagemap`, `serializeImagemap`, `formatPercent` |
 | `@haruhimemoe/bbcode/flags` | `COUNTRIES`, `findCountry`, `searchCountries`, `flagUrl`, `normalizeCountryCode` |
 | `@haruhimemoe/bbcode/template` | `fillTemplate`, `templateFields`, `FIELD_KINDS` |
+| `@haruhimemoe/bbcode/markdown` | `toMarkdown`, `fromMarkdown`, `LOSS_CODES` |
 | `@haruhimemoe/bbcode/styles.css` | Styles for `render` output |
 
 Every function is pure and synchronous. Offsets are UTF-16 indices into the string you passed, like `String.prototype.slice` uses.
@@ -242,6 +243,42 @@ interface TemplateField {
 An empty value falls back to `default`; an empty required field is an error. A field with an error, and a placeholder with no declared field, stay as `{{key}}` in the text. `errors` is `{ key, message }[]`.
 
 `templateFields(body, fields?)` returns `{ keys, undeclared, unused }`: placeholders in the body, those without a declared field, and declared fields the body never uses. `FIELD_KINDS` lists the kinds.
+
+### `@haruhimemoe/bbcode/markdown`
+
+`toMarkdown` and `fromMarkdown` convert between BBCode and markdown, best effort. Both return what they couldn't carry over instead of silently dropping it.
+
+```ts
+interface Conversion { output: string; lost: Loss[] }
+interface Loss { code: LossCode; message: string; start: number; end: number } // UTF-16 offsets into the input
+```
+
+| Function | Signature |
+| --- | --- |
+| `toMarkdown` | `(input: string \| Document, options?: { boxStyle?: "bold-title" \| "quote" }) => Conversion` |
+| `fromMarkdown` | `(markdown: string, options?: { headingStyle?: "heading" \| "bold"; tableStyle?: "code" \| "text" }) => Conversion` |
+
+```ts
+import { fromMarkdown, toMarkdown } from "@haruhimemoe/bbcode/markdown";
+
+toMarkdown("[b]hi[/b] [size=150]big[/size]");
+// { output: "**hi** big", lost: [{ code: "no-equivalent", message: "[size] has no markdown form, kept the text.", start: 10, end: 30 }] }
+
+fromMarkdown("| a | b |\n| - | - |\n| 1 | 2 |");
+// { output: "[code]\na | b\n--+--\n1 | 2\n[/code]", lost: [{ code: "table", message: "osu! has no tables, kept as aligned text.", start: 0, end: 29 }] }
+```
+
+Behaviors worth knowing:
+
+- Tables become an aligned `[code]` block (`tableStyle: "text"` for plain rows instead).
+- `[color]`, `[size]`, `[centre]`/`[left]`/`[right]`, `[u]` and `[spoiler]` keep their text in markdown and report a `no-equivalent` loss; markdown has no equivalent tag.
+- A markdown code span whose content looks like BBCode gets a loss, because osu! parses `[c]`'s content as BBCode, so the tag would actually render instead of staying literal.
+- Link and image URLs are limited to the schemes osu! accepts (`http`, `https`, `ftp` for links; `http`, `https` for images). Anything else keeps the link text or alt text and reports a loss.
+- `[`, `]` and spaces in a URL are percent-encoded, since osu! reads them literally and `[`/`]` can cut a `[url=...]` argument short.
+- Content nested deeper than `LIMITS.nesting` (100) is kept as text, with a loss, instead of recursing further.
+- `LOSS_CODES`: `no-equivalent`, `table`, `html`, `nested-list-flattened`, `heading-level`, `footnote`, `reference-link-unresolved`.
+- Not full CommonMark: it targets GitHub/Discord-style markdown (GFM strikethrough, autolinks, tables), not every CommonMark edge case.
+- No dependencies, like the rest of the package.
 
 ### `@haruhimemoe/bbcode/styles.css`
 

@@ -1,8 +1,8 @@
 # @haruhimemoe/bbcode
 
-> Parses, renders, lints and counts osu! BBCode the way osu! does. `parse` gives a lossless tree (serialize(parse(x)) === x), `render` gives safe HTML with `bb-` classes and osu!'s newline eating, `lint` explains everything osu! would show wrong, `count` checks the 60,000 character limit. Subpaths add builders (colors, gradients, flags, profiles, boxes, lists, escape), imagemaps, a country list with osu! flag URLs, template fields and a stylesheet. No runtime dependencies. ESM for Node 22.12+, Bun, Deno, browsers and bundlers. Not affiliated with ppy.
+> Parses, renders, lints and counts osu! BBCode the way osu! does. `parse` gives a lossless tree (serialize(parse(x)) === x), `render` gives safe HTML with `bb-` classes and osu!'s newline eating, `lint` explains everything osu! would show wrong, `count` checks the 60,000 character limit. Subpaths add builders (colors, gradients, flags, profiles, boxes, lists, escape), imagemaps, a country list with osu! flag URLs, template fields, markdown conversion and a stylesheet. No runtime dependencies. ESM for Node 22.12+, Bun, Deno, browsers and bundlers. Not affiliated with ppy.
 
-Main exports: `parse(text)`, `serialize(doc)`, `render(textOrDoc, options?)`, `lint(text, options?)`, `applyFix(text, fix)`, `count(text, limit?)`, `LIMITS`, `TAGS`, `findTag(name)`, `LINT_CODES`. Subpaths: `@haruhimemoe/bbcode/helpers`, `/imagemap`, `/flags`, `/template`, `/styles.css`.
+Main exports: `parse(text)`, `serialize(doc)`, `render(textOrDoc, options?)`, `lint(text, options?)`, `applyFix(text, fix)`, `count(text, limit?)`, `LIMITS`, `TAGS`, `findTag(name)`, `LINT_CODES`. Subpaths: `@haruhimemoe/bbcode/helpers`, `/imagemap`, `/flags`, `/template`, `/markdown`, `/styles.css`.
 
 ## Docs
 
@@ -13,6 +13,7 @@ Main exports: `parse(text)`, `serialize(doc)`, `render(textOrDoc, options?)`, `l
 - [Lint codes](https://github.com/haruhimemoe/bbcode#lint-codes): the twelve codes, severities and fixes
 - [Safety](https://github.com/haruhimemoe/bbcode#safety): what render checks, and what the proxy option must return
 - [Differences from osu!](https://github.com/haruhimemoe/bbcode#differences-from-osu): where output differs on purpose
+- [Markdown](https://github.com/haruhimemoe/bbcode#markdown): `toMarkdown` and `fromMarkdown`, options, and the `lost` report
 
 ## Package
 
