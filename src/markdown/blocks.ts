@@ -28,20 +28,36 @@ const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 // `<https://x.y>` or `<mailto:a@b.c>` (scheme immediately followed by `:`) doesn't qualify.
 const HTML_OPEN = /^ {0,3}<(\/?[a-zA-Z][\w-]*(?=[\s/>]|$)|!--)/;
 
+// indexOf is a native, optimized scan; a per-character loop comparing source[i] === "\n"
+// allocates a fresh one-character string for every position, which is the difference between a
+// linear scan of hostile (tens-of-MB) input finishing in milliseconds or seconds.
 const splitLines = (source: string): Line[] => {
   const lines: Line[] = [];
   let start = 0;
-  for (let i = 0; i <= source.length; i++) {
-    if (i === source.length || source[i] === "\n") {
-      const end = i > start && source[i - 1] === "\r" ? i - 1 : i;
-      lines.push({ text: source.slice(start, end), start });
-      start = i + 1;
-    }
+  const len = source.length;
+  while (start <= len) {
+    let i = source.indexOf("\n", start);
+    if (i === -1) i = len;
+    const end = i > start && source.charCodeAt(i - 1) === 13 /* \r */ ? i - 1 : i;
+    lines.push({ text: source.slice(start, end), start });
+    start = i + 1;
   }
   return lines;
 };
 
-const blank = (l: Line): boolean => l.text.trim() === "";
+// A line's content is checked for blankness far more often than it's actually blank: a deeply
+// indented line (hostile input, or just a long nested list) can have thousands of leading spaces,
+// and l.text.trim() scans every one of them to find the first non-space character. Checking the
+// first and last code units first answers "not blank" in O(1) for any line that has real content
+// at either end (the overwhelmingly common case) without walking the whole run of spaces; trim()
+// only runs for the rare line that's whitespace at both ends.
+const isWs = (c: number): boolean => c === 32 || c === 9 || c === 11 || c === 12;
+const blank = (l: Line): boolean => {
+  const t = l.text;
+  if (t.length === 0) return true;
+  if (!isWs(t.charCodeAt(0)) || !isWs(t.charCodeAt(t.length - 1))) return false;
+  return t.trim() === "";
+};
 const endOf = (l: Line): number => l.start + l.text.length;
 const cells = (row: string): string[] =>
   row
@@ -176,18 +192,28 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
         const im = ordered ? l.text.match(ORDERED) : l.text.match(BULLET);
         if (!im) break;
         const width = im[0].length;
+        // Loop-invariant: width doesn't change across the continuation scan below, so build the
+        // indent prefix once instead of re-allocating it on every line (it was costing a fresh
+        // string on every iteration of a loop that, for hostile input, runs tens of thousands of
+        // times).
+        const indent = " ".repeat(width);
         const body: Line[] = [{ text: l.text.slice(im[0].length), start: l.start + im[0].length }];
         j++;
         while (j < lines.length) {
           const next = lines[j] as Line;
-          if (blank(next)) {
+          // Binding these checks before branching on them (instead of inline in the `if`)
+          // keeps V8's inline caches monomorphic here; left inline, this loop megamorphs on
+          // hostile input (tens of thousands of iterations) and runs ~10x slower.
+          const isBlank = blank(next);
+          if (isBlank) {
             const after = lines[j + 1];
-            if (!after?.text.startsWith(" ".repeat(width))) break;
+            if (!after?.text.startsWith(indent)) break;
             body.push(next);
             j++;
             continue;
           }
-          if (next.text.startsWith(" ".repeat(width))) {
+          const indented = next.text.startsWith(indent);
+          if (indented) {
             body.push({ text: next.text.slice(width), start: next.start + width });
             j++;
             continue;
