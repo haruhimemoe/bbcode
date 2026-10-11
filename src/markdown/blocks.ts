@@ -54,7 +54,7 @@ const cells = (row: string): string[] =>
 const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] => {
   const out: MdBlock[] = [];
   let i = 0;
-  const paragraph = (from: number, to: number): void => {
+  const paragraph = (from: number, to: number, capped?: boolean): void => {
     const first = lines[from] as Line;
     const last = lines[to - 1] as Line;
     out.push({
@@ -66,6 +66,7 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
       textStart: first.start + (first.text.length - first.text.trimStart().length),
       start: first.start,
       end: endOf(last),
+      ...(capped ? { capped: true as const } : {}),
     });
   };
   while (i < lines.length) {
@@ -153,7 +154,7 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
       }
       const end = endOf(lines[j - 1] as Line);
       if (depth >= maxDepth) {
-        paragraph(i, j);
+        paragraph(i, j, true);
       } else {
         out.push({
           kind: "quote",
@@ -216,6 +217,7 @@ const parseLines = (lines: Line[], depth: number, maxDepth: number): MdBlock[] =
               textStart: first.start,
               start: first.start,
               end: endOf(body[body.length - 1] as Line),
+              capped: true,
             },
           ]);
         } else {

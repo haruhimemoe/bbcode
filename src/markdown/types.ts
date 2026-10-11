@@ -59,7 +59,15 @@ export type MdInline =
 /** Block markdown, after parsing. Inline content stays raw text until the inline pass. */
 export type MdBlock =
   | { kind: "heading"; level: number; text: string; textStart: number; start: number; end: number }
-  | { kind: "paragraph"; text: string; textStart: number; start: number; end: number }
+  | {
+      kind: "paragraph";
+      text: string;
+      textStart: number;
+      start: number;
+      end: number;
+      /** Set when a container (quote/list) hit `maxDepth` and fell back to text here. */
+      capped?: boolean;
+    }
   | { kind: "quote"; children: MdBlock[]; start: number; end: number }
   | { kind: "list"; ordered: boolean; items: MdBlock[][]; start: number; end: number }
   | { kind: "code"; lang: string; value: string; start: number; end: number }

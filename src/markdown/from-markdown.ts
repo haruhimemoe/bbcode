@@ -17,11 +17,25 @@ const REF_DEF = /^ {0,3}\[([^\]^][^\]]*)\]:\s*<?(\S+?)>?(?:\s+"[^"]*")?\s*$/gm;
 const FOOTNOTE_DEF = /^ {0,3}\[\^[^\]]+\]:.*$/gm;
 const FOOTNOTE_REF = /\[\^[^\]]+\]/g;
 
-type Ctx = { lost: Loss[]; refs: Map<string, string>; opts: Required<FromMarkdownOptions> };
+type Ctx = {
+  lost: Loss[];
+  refs: Map<string, string>;
+  opts: Required<FromMarkdownOptions>;
+  /** The source actually parsed (markdown with definitions blanked out, same length as input). */
+  source: string;
+  /** `[start, end]` of every `[c]`/`[code]` span emitted so far; filled in as blocks() runs. */
+  codeRanges: [number, number][];
+};
 
 const lose = (ctx: Ctx, code: Loss["code"], message: string, start: number, end: number): void => {
   ctx.lost.push({ code, message, start, end });
 };
+
+// osu! shows `[`, `]` and a bare space in a URL argument or raw URL as the literal character,
+// which (for `[`/`]`) can also cut a `[url=...]` argument short. Percent-encoding them keeps the
+// tag intact and the URL working.
+const encodeHref = (href: string): string =>
+  href.replace(/[[\] ]/g, (c) => (c === " " ? "%20" : c === "[" ? "%5B" : "%5D"));
 
 const inlineOf = (n: MdInline, ctx: Ctx): string => {
   switch (n.kind) {
@@ -33,19 +47,33 @@ const inlineOf = (n: MdInline, ctx: Ctx): string => {
       return `[i]${inline(n.children, ctx)}[/i]`;
     case "strike":
       return `[s]${inline(n.children, ctx)}[/s]`;
-    case "code":
+    case "code": {
+      ctx.codeRanges.push([n.start, n.end]);
+      // [c] isn't raw (see src/tags.ts): osu! parses its content as BBCode, so a tag typed
+      // inside backticks will actually render instead of staying a literal `[b]`.
+      if (parse(n.value).children.some((child) => child.type === "tag")) {
+        lose(
+          ctx,
+          "no-equivalent",
+          "osu! reads BBCode inside [c]; this will render as markup.",
+          n.start,
+          n.end,
+        );
+      }
       return `[c]${n.value}[/c]`;
+    }
     case "break":
       return "\n";
     case "image":
-      return `[img]${n.src}[/img]`;
+      return `[img]${encodeHref(n.src)}[/img]`;
     case "html":
       lose(ctx, "html", "HTML has no BBCode form, kept as text.", n.start, n.end);
       return n.value;
     case "link": {
       const label = inline(n.children, ctx);
       if (n.href.startsWith("mailto:")) return `[email]${n.href.slice(7)}[/email]`;
-      return label === n.href ? `[url]${n.href}[/url]` : `[url=${n.href}]${label}[/url]`;
+      const href = encodeHref(n.href);
+      return label === n.href ? `[url]${href}[/url]` : `[url=${href}]${label}[/url]`;
     }
   }
 };
@@ -88,6 +116,16 @@ const table = (rows: string[][], style: "code" | "text"): string => {
 const blockOf = (b: MdBlock, ctx: Ctx): string => {
   switch (b.kind) {
     case "paragraph":
+      if (b.capped) {
+        lose(
+          ctx,
+          "no-equivalent",
+          `nested deeper than ${LIMITS.nesting}; kept as text.`,
+          b.start,
+          b.end,
+        );
+        return ctx.source.slice(b.start, b.end);
+      }
       return textOf(b.text, b.textStart, ctx);
     case "heading": {
       if (b.level > 1) {
@@ -113,6 +151,7 @@ const blockOf = (b: MdBlock, ctx: Ctx): string => {
       return `[list${b.ordered ? "=1" : ""}]\n${items}\n[/list]`;
     }
     case "code":
+      ctx.codeRanges.push([b.start, b.end]);
       return `[code]\n${b.value}\n[/code]`;
     case "rule":
       lose(ctx, "no-equivalent", "osu! has no horizontal rule, left a blank line.", b.start, b.end);
@@ -133,30 +172,41 @@ const blocks = (list: MdBlock[], ctx: Ctx): string =>
     .replace(/\n{3,}/g, "\n\n");
 
 /**
- * Collects `[start, end]` of every `code` block and every inline `code` node, walking paragraphs
- * and headings through `parseInlines` and recursing into quotes and list items. Used to exclude
- * literal BBCode-looking text inside code spans/blocks from the "typed BBCode" warning.
+ * Collects `[start, end]` of every fenced/indented code block in `list`, recursing into quotes
+ * and list items. Used before any definition is blanked, so a reference or footnote definition
+ * written inside a code block is left alone (both in the output and in `refs`).
  */
-const codeRanges = (
-  list: MdBlock[],
-  refs: ReadonlyMap<string, string>,
-  out: [number, number][] = [],
-): [number, number][] => {
-  const walkInline = (nodes: MdInline[]): void => {
-    for (const n of nodes) {
-      if (n.kind === "code") out.push([n.start, n.end]);
-      else if ("children" in n) walkInline(n.children);
-    }
-  };
+const blockCodeRanges = (list: MdBlock[], out: [number, number][] = []): [number, number][] => {
   for (const b of list) {
     if (b.kind === "code") out.push([b.start, b.end]);
-    else if (b.kind === "paragraph" || b.kind === "heading")
-      walkInline(parseInlines(b.text, b.textStart, refs));
-    else if (b.kind === "quote") codeRanges(b.children, refs, out);
-    else if (b.kind === "list") for (const item of b.items) codeRanges(item, refs, out);
+    else if (b.kind === "quote") blockCodeRanges(b.children, out);
+    else if (b.kind === "list") for (const item of b.items) blockCodeRanges(item, out);
   }
   return out;
 };
+
+const insideAny = (ranges: readonly [number, number][], at: number, end: number): boolean =>
+  ranges.some(([s, e]) => at >= s && end <= e);
+
+/**
+ * Replaces every match of `re` with blanks of the same length (so offsets elsewhere keep
+ * pointing into the same positions), except a match that falls inside `skip` (a code block):
+ * that one is left as written and `keep` is never called for it.
+ */
+const blankOut = (
+  s: string,
+  re: RegExp,
+  skip: readonly [number, number][],
+  keep: (m: RegExpMatchArray, offset: number) => void,
+): string =>
+  s.replace(re, (...args) => {
+    const full = args[0] as string;
+    const offset = args[args.length - 2] as number;
+    const groups = args.slice(0, -2) as unknown as RegExpMatchArray;
+    if (insideAny(skip, offset, offset + full.length)) return full;
+    keep(groups, offset);
+    return full.replace(/[^\n]/g, " ");
+  });
 
 /**
  * @function fromMarkdown
@@ -172,29 +222,51 @@ export const fromMarkdown = (markdown: string, options: FromMarkdownOptions = {}
       headingStyle: options.headingStyle ?? "heading",
       tableStyle: options.tableStyle ?? "code",
     },
+    source: markdown,
+    codeRanges: [],
   };
+  // Code blocks are found on the untouched input, before any definition is blanked out, so a
+  // definition written inside one is left exactly as written (finding 4).
+  const codeSkip = blockCodeRanges(parseBlocks(markdown, LIMITS.nesting));
+
   // Blank definitions in place (same length) so offsets still point into the input.
-  const blankOut = (s: string, re: RegExp, keep: (m: RegExpMatchArray) => void) =>
-    s.replace(re, (...args) => {
-      keep(args as unknown as RegExpMatchArray);
-      return (args[0] as string).replace(/[^\n]/g, " ");
-    });
-  let source = blankOut(markdown, REF_DEF, (m) =>
+  let source = blankOut(markdown, REF_DEF, codeSkip, (m) =>
     ctx.refs.set((m[1] as string).trim().toLowerCase(), m[2] as string),
   );
-  source = blankOut(source, FOOTNOTE_DEF, () => {});
+  const footnoteDefs: [number, number][] = [];
+  source = blankOut(source, FOOTNOTE_DEF, codeSkip, (m, offset) =>
+    footnoteDefs.push([offset, offset + (m[0] as string).length]),
+  );
+  ctx.source = source;
+
+  // Each definition drops its own text (once); a reference that resolves to one of these spans
+  // (the `[^1]` that opens it) is not also a dangling reference (finding 7).
+  for (const [s, e] of footnoteDefs) {
+    lose(ctx, "footnote", "osu! has no footnotes, dropped the note text.", s, e);
+  }
   for (const m of markdown.matchAll(FOOTNOTE_REF)) {
     const at = m.index ?? 0;
-    lose(ctx, "footnote", "osu! has no footnotes, kept the marker as text.", at, at + m[0].length);
+    const end = at + (m[0] as string).length;
+    if (insideAny(footnoteDefs, at, end)) continue;
+    lose(ctx, "footnote", "osu! has no footnotes, kept the marker as text.", at, end);
   }
+
   const parsed = parseBlocks(source, LIMITS.nesting);
   const output = blocks(parsed, ctx).trim();
+
   // Typed BBCode in the markdown passes through, and osu! has no escape for it: warn once per
-  // top-level tag (its children sit inside the same span), except inside code.
-  const code = codeRanges(parsed, ctx.refs);
+  // top-level tag (its children sit inside the same span), except inside code. Both the tags
+  // (siblings of a document, so already in increasing, non-overlapping order) and the code
+  // ranges collected while emitting are sorted, so one pass with a single moving index covers
+  // the whole document in O(n + m) instead of a range scan per tag.
+  const ranges = ctx.codeRanges.slice().sort((a, b) => a[0] - b[0]);
+  let ri = 0;
   for (const node of parse(markdown).children) {
     if (node.type !== "tag") continue;
-    if (code.some(([s, e]) => s <= node.start && node.end <= e)) continue;
+    while (ri < ranges.length && (ranges[ri] as [number, number])[1] <= node.start) ri++;
+    const range = ranges[ri];
+    const covered = range !== undefined && range[0] <= node.start && node.end <= range[1];
+    if (covered) continue;
     lose(
       ctx,
       "no-equivalent",

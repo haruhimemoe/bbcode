@@ -33,6 +33,23 @@ const ESCAPABLE = /[!-/:-@[-`{-~]/;
 const URL_RE = /^https?:\/\/[^\s<>]+/;
 const HTML_RE = /^<\/?[a-zA-Z][\w-]*(?:\s[^<>]*)?\/?>|^<!--[\s\S]*?-->/;
 
+// CommonMark: a backslash-escaped punctuation character inside a link destination is the bare
+// character, not the backslash. Reuses the same escapable set the tokenizer itself honors.
+const unescapeDest = (s: string): string => s.replace(/\\([!-/:-@[-`{-~])/g, "$1");
+
+/**
+ * Matches the `(...)` inline destination right after a closing `]`. An angle-bracket form
+ * (`<...>`) may contain spaces (anything but `<`, `>` or a newline); the bare form may not.
+ * Returns the full matched text (to know how much to skip) and the unescaped href.
+ */
+const matchInlineDest = (rest: string): { full: string; href: string } | null => {
+  const angle = rest.match(/^\(\s*<([^<>\n]*)>(?:\s+"[^"]*")?\s*\)/);
+  if (angle) return { full: angle[0] as string, href: unescapeDest(angle[1] as string) };
+  const bare = rest.match(/^\(\s*([^\s<>()]*)(?:\s+"[^"]*")?\s*\)/);
+  if (bare) return { full: bare[0] as string, href: unescapeDest(bare[1] as string) };
+  return null;
+};
+
 const flank = (before: string, after: string) => {
   const left =
     !SPACE.test(after || " ") &&
@@ -171,17 +188,13 @@ const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): N
         continue;
       }
       const rest = s.slice(i + 1);
-      const inlineDest = rest.match(/^\(\s*<?([^\s<>()]*)>?(?:\s+"[^"]*")?\s*\)/);
+      const dest = matchInlineDest(rest);
       const refDest = rest.match(/^\[([^\]]*)\]/);
       const label = s.slice(open.pos + (open.image ? 2 : 1), i);
-      const href = inlineDest
-        ? inlineDest[1]
+      const href = dest
+        ? dest.href
         : refs.get(((refDest?.[1] || label) as string).trim().toLowerCase());
-      const used = inlineDest
-        ? inlineDest[0].length
-        : refDest && href !== undefined
-          ? refDest[0].length
-          : 0;
+      const used = dest ? dest.full.length : refDest && href !== undefined ? refDest[0].length : 0;
       if (href !== undefined) {
         const children = sanitizeBrackets(out.splice(open.index + 1) as Tok[]);
         out.pop();

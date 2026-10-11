@@ -48,7 +48,6 @@ describe("fromMarkdown", () => {
     const r = fromMarkdown("say [b]hi[/b]");
     expect(r.output).toBe("say [b]hi[/b]");
     expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent", start: 4, end: 13 })]);
-    expect(fromMarkdown("`[b]x[/b]`").lost).toEqual([]);
   });
   it("resolves reference definitions and drops them from output", () => {
     expect(bb("[t][x]\n\n[x]: https://x.y")).toBe("[url=https://x.y]t[/url]");
@@ -57,5 +56,65 @@ describe("fromMarkdown", () => {
     const sample =
       "# T\n\n**b *i* b** ~~s~~\n\n> q\n\n- a\n  - b\n\n```\n[b]\n```\n\n| a |\n|---|\n| 1 |";
     expect(lint(bb(sample)).filter((d) => d.severity === "error")).toEqual([]);
+  });
+
+  // --- Fix round 1: review findings ---
+
+  it("warns when a code span's text parses as a live tag (finding 1)", () => {
+    const r = fromMarkdown("`[b]x[/b]`");
+    expect(r.output).toBe("[c][b]x[/b][/c]");
+    expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent", start: 0, end: 10 })]);
+  });
+  it("gives fenced code (raw) no live-tag warning (finding 1)", () => {
+    expect(codes("```\n[b]\n```")).toEqual([]);
+    expect(bb("```\n[b]\n```")).toBe("[code]\n[b]\n[/code]");
+  });
+  it("percent-encodes [ ] and space in image and link URLs (finding 2)", () => {
+    expect(bb("![a](https://i/a[1].png)")).toBe("[img]https://i/a%5B1%5D.png[/img]");
+    expect(lint(bb("![a](https://i/a[1].png)")).filter((d) => d.severity === "error")).toEqual([]);
+  });
+  it("keeps the url tag intact for a ] inside an angle destination (finding 3a)", () => {
+    expect(bb("[t](<https://x.y/a]b>)")).toBe("[url=https://x.y/a%5Db]t[/url]");
+  });
+  it("drops the backslash from an escaped ] in a link destination (finding 3b)", () => {
+    expect(bb("[t](https://x.y/a\\]b)")).toBe("[url=https://x.y/a%5Db]t[/url]");
+  });
+  it("accepts a space inside an angle-bracket link destination (finding 3c)", () => {
+    expect(bb("[t](<https://x.y/a b>)")).toBe("[url=https://x.y/a%20b]t[/url]");
+  });
+  it("does not resolve or blank reference definitions written inside fenced code (finding 4)", () => {
+    const sample = "```\n[x]: https://evil\n```\n\n[t][x]";
+    expect(bb(sample)).toBe("[code]\n[x]: https://evil\n[/code]\n\n[t][x]");
+    expect(codes(sample)).toEqual(["reference-link-unresolved"]);
+  });
+  it("reports nesting deeper than the depth cap instead of losing it silently (finding 5)", () => {
+    const deep = `${">".repeat(101)} x`;
+    const r = fromMarkdown(deep);
+    expect(r.lost).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "no-equivalent" })]),
+    );
+    const capped = r.lost.find((l) => l.message.includes("nested deeper than"));
+    expect(capped).toBeDefined();
+    expect(capped?.message).toContain("100");
+  });
+  it("reports the footnote reference and its definition exactly once each (finding 7)", () => {
+    const r = fromMarkdown("x[^1]\n\n[^1]: note");
+    const footnoteLosses = r.lost.filter((l) => l.code === "footnote");
+    expect(footnoteLosses).toHaveLength(2);
+    expect(footnoteLosses.map((l) => l.message)).toEqual([
+      "osu! has no footnotes, kept the marker as text.",
+      "osu! has no footnotes, dropped the note text.",
+    ]);
+  });
+  it("scans typed-tag warnings in roughly linear time (finding 6)", () => {
+    const n = 4000;
+    const parts: string[] = [];
+    for (let i = 0; i < n; i++) parts.push("`[c]`", "[b]x[/b]");
+    const sample = parts.join("\n\n");
+    const start = performance.now();
+    const r = fromMarkdown(sample);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(1000);
+    expect(r.lost.filter((l) => l.code === "no-equivalent")).toHaveLength(n);
   });
 });
