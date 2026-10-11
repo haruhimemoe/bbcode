@@ -42,6 +42,10 @@
       "types": "./dist/template/index.d.ts",
       "default": "./dist/template/index.js"
     },
+    "./markdown": {
+      "types": "./dist/markdown/index.d.ts",
+      "default": "./dist/markdown/index.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
