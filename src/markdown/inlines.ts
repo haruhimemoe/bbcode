@@ -18,7 +18,14 @@ type Delim = {
   start: number;
   end: number;
 };
-type Tok = MdInline | Delim;
+// A `[`/`![` opener, kept as its own non-mergeable identity so pushText never absorbs the
+// label text that follows it into the marker itself. Resolved to a link/image (spliced out)
+// or demoted to literal text (bracketText) once we know whether it closed.
+type Bracket = { kind: "bracket"; image: boolean; start: number; end: number };
+type Tok = MdInline | Delim | Bracket;
+// What's left once every "bracket" marker has been resolved or demoted to text — matchDelims
+// only ever sees this, never a raw Bracket.
+type Node = MdInline | Delim;
 
 const PUNCT = /[\p{P}\p{S}]/u;
 const SPACE = /\s/;
@@ -46,7 +53,20 @@ const pushText = (out: Tok[], value: string, start: number, end: number): void =
   }
 };
 
-const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): Tok[] => {
+const bracketText = (b: Bracket): MdInline => ({
+  kind: "text",
+  value: b.image ? "![" : "[",
+  start: b.start,
+  end: b.end,
+});
+
+// Any "bracket" tokens left in a slice (never closed, or closed-but-failed-to-resolve) must
+// become plain text before the slice is handed to matchDelims or returned from tokenize —
+// "bracket" isn't a valid MdInline kind.
+const sanitizeBrackets = (toks: Tok[]): Node[] =>
+  toks.map((t) => (t.kind === "bracket" ? bracketText(t) : t));
+
+const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): Node[] => {
   const out: Tok[] = [];
   const brackets: { index: number; pos: number; image: boolean }[] = [];
   let i = 0;
@@ -133,13 +153,13 @@ const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): T
     }
     if (c === "!" && s[i + 1] === "[") {
       brackets.push({ index: out.length, pos: i, image: true });
-      pushText(out, "![", base + i, base + i + 2);
+      out.push({ kind: "bracket", image: true, start: base + i, end: base + i + 2 });
       i += 2;
       continue;
     }
     if (c === "[") {
       brackets.push({ index: out.length, pos: i, image: false });
-      out.push({ kind: "text", value: "[", start: base + i, end: base + i + 1 });
+      out.push({ kind: "bracket", image: false, start: base + i, end: base + i + 1 });
       i += 1;
       continue;
     }
@@ -163,7 +183,7 @@ const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): T
           ? refDest[0].length
           : 0;
       if (href !== undefined) {
-        const children = out.splice(open.index + 1) as Tok[];
+        const children = sanitizeBrackets(out.splice(open.index + 1) as Tok[]);
         out.pop();
         const start = base + open.pos;
         const end = base + i + 1 + used;
@@ -177,12 +197,24 @@ const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): T
             start,
             end,
           });
-          // A link can't contain a link: drop the outer brackets still open.
-          for (const b of brackets) if (!b.image) b.index = -1;
+          // A link can't contain a link: demote the outer open-link brackets still on the
+          // stack to literal text now, and mark them invalidated so their eventual `]`
+          // (if any) also falls back to literal text instead of re-resolving.
+          for (const b of brackets) {
+            if (!b.image && b.index !== -1) {
+              const tok = out[b.index];
+              if (tok && tok.kind === "bracket") out[b.index] = bracketText(tok);
+              b.index = -1;
+            }
+          }
         }
         i += 1 + used;
         continue;
       }
+      // Failed to resolve: the opener becomes literal text (`[` or `![`) and the `]` is a
+      // separate literal character — pushText may still merge the two if they end up adjacent.
+      const openTok = out[open.index];
+      if (openTok && openTok.kind === "bracket") out[open.index] = bracketText(openTok);
       pushText(out, "]", base + i, base + i + 1);
       i += 1;
       continue;
@@ -212,7 +244,8 @@ const tokenize = (s: string, base: number, refs: ReadonlyMap<string, string>): T
     pushText(out, c, base + i, base + i + 1);
     i += 1;
   }
-  return out;
+  // Any brackets that never closed are literal text; matchDelims merges adjacent text at the end.
+  return sanitizeBrackets(out);
 };
 
 const toText = (d: Delim): MdInline => ({
@@ -234,8 +267,8 @@ const merge = (nodes: MdInline[]): MdInline[] => {
   return out;
 };
 
-function matchDelims(toks: Tok[]): MdInline[] {
-  const stack: Tok[] = [];
+function matchDelims(toks: Node[]): MdInline[] {
+  const stack: Node[] = [];
   const bottom = new Map<Delim["char"], number>([
     ["*", 0],
     ["_", 0],

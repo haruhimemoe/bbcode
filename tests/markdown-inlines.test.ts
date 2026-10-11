@@ -53,6 +53,28 @@ describe("parseInlines", () => {
       alt: "alt",
     });
   });
+  it("keeps the link label's text as children", () => {
+    expect(p("[a](u)")[0]).toMatchObject({
+      kind: "link",
+      children: [{ kind: "text", value: "a", start: 1, end: 2 }],
+    });
+    expect(
+      (p("[plain text](u)")[0] as { children: { value: string }[] }).children[0],
+    ).toMatchObject({
+      value: "plain text",
+    });
+    const [bolded] = p("[ a **bold** b](u)");
+    expect(bolded).toMatchObject({ kind: "link" });
+    const children = (bolded as { children: { kind: string; value?: string }[] }).children;
+    expect(children.map((c) => c.kind)).toEqual(["text", "strong", "text"]);
+    expect(children[0]?.value).toBe(" a ");
+  });
+  it("leaves an unresolved bracket as a single literal text node", () => {
+    expect(p("[a b")).toEqual([{ kind: "text", value: "[a b", start: 0, end: 4 }]);
+  });
+  it("keeps an image alt's text intact even with inline markers", () => {
+    expect(p("![a*b*](s)")[0]).toMatchObject({ kind: "image", src: "s", alt: "a*b*" });
+  });
   it("resolves reference links", () => {
     const refs = new Map([["x", "https://x.y"]]);
     expect(parseInlines("[t][x]", 0, refs)[0]).toMatchObject({ kind: "link", href: "https://x.y" });
