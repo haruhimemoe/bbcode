@@ -8,11 +8,25 @@
 
 import type { Document, Node, TagNode } from "../ast.js";
 import { parse } from "../parse.js";
+import { youtubeId } from "../safety.js";
 import { escapeMarkdown } from "./escape.js";
 import type { Conversion, Loss, ToMarkdownOptions } from "./types.js";
 
 const WRAP: Record<string, string> = { b: "**", i: "*", s: "~~" };
 const DROPPED = new Set(["u", "color", "size", "spoiler", "centre", "left", "right"]);
+
+// A markdown destination (inside `(...)` or `<...>`) breaks the surrounding syntax on a bare
+// space, `(`, `)`, `<` or `>`. Percent-encoding just those four leaves an existing `%xx` escape
+// (or anything else) untouched, unlike a full `encodeURI`/`encodeURIComponent` pass.
+const DEST_ESCAPES: Record<string, string> = {
+  " ": "%20",
+  "(": "%28",
+  ")": "%29",
+  "<": "%3C",
+  ">": "%3E",
+};
+const encodeDest = (href: string): string =>
+  href.replace(/[ ()<>]/g, (c) => DEST_ESCAPES[c] as string);
 
 type Ctx = { lost: Loss[]; boxStyle: "bold-title" | "quote" };
 
@@ -111,21 +125,25 @@ const tag = (node: TagNode, ctx: Ctx, lineStart: boolean): string => {
     case "list":
       return listItems(node, ctx);
     case "url": {
-      const href = node.arg ?? rawText(node);
+      const href = encodeDest(node.arg ?? rawText(node));
       return node.arg ? `[${inline(node.children, ctx, false)}](${href})` : `<${href}>`;
     }
     case "email":
-      return `<mailto:${node.arg ?? rawText(node)}>`;
+      return `<mailto:${encodeDest(node.arg ?? rawText(node))}>`;
     case "img":
-      return `![](${rawText(node)})`;
+      return `![](${encodeDest(rawText(node))})`;
     case "profile": {
       const name = rawText(node);
-      return `[${name}](https://osu.ppy.sh/users/${encodeURIComponent(node.arg ?? name)})`;
+      return `[${name}](${encodeDest(`https://osu.ppy.sh/users/${encodeURIComponent(node.arg ?? name)}`)})`;
     }
-    case "youtube":
-      return `<https://www.youtube.com/watch?v=${rawText(node)}>`;
+    case "youtube": {
+      const id = youtubeId(rawText(node));
+      if (id) return `<https://www.youtube.com/watch?v=${id}>`;
+      lose(ctx, node, "the text");
+      return escapeMarkdown(rawText(node), lineStart);
+    }
     case "audio":
-      return `<${rawText(node)}>`;
+      return `<${encodeDest(rawText(node))}>`;
     case "box":
     case "spoilerbox": {
       lose(ctx, node, "the title and text");
@@ -159,6 +177,10 @@ export const toMarkdown = (
   input: string | Document,
   options: ToMarkdownOptions = {},
 ): Conversion => {
+  // fromMarkdown trims whitespace-only input down to "" (the output.trim() at the end of its
+  // block pass), so toMarkdown matches that here instead of echoing the input's own whitespace
+  // back out unchanged.
+  if (typeof input === "string" && input.trim() === "") return { output: "", lost: [] };
   const doc = typeof input === "string" ? parse(input) : input;
   const ctx: Ctx = { lost: [], boxStyle: options.boxStyle ?? "bold-title" };
   const output = inline(doc.children, ctx, true);

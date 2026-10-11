@@ -113,6 +113,53 @@ describe("fromMarkdown", () => {
   it("reports a bare footnote reference with no definition", () => {
     expect(codes("see [^1] here")).toEqual(["footnote"]);
   });
+  // --- Final review findings ---
+
+  it("warns when passed-through [img] has a non-http scheme osu! will reject (finding 3)", () => {
+    const r = fromMarkdown("[img]javascript:x[/img]");
+    const msg = r.lost.find((l) => l.message.includes("needs an http"));
+    expect(msg).toBeDefined();
+    expect(msg?.message).toContain("osu! will reject or misread this:");
+  });
+  it("warns when a passed-through [url=] destination osu! will reject (finding 3)", () => {
+    const r = fromMarkdown("[url=x]y[/url]");
+    const msg = r.lost.find((l) => l.message.includes("needs a link starting with"));
+    expect(msg).toBeDefined();
+    expect(msg?.start).toBe(0);
+    expect(msg?.end).toBe("[url=x]y[/url]".length);
+  });
+  it("warns when a passed-through [size=] is out of range osu! will clamp or reject (finding 3)", () => {
+    const r = fromMarkdown("[size=999]");
+    const msg = r.lost.find((l) => l.message.includes("never closed"));
+    expect(msg).toBeDefined();
+  });
+  it("warns when a passed-through [b] is never closed (finding 3)", () => {
+    const r = fromMarkdown("[b]open");
+    const msg = r.lost.find((l) => l.message.includes("never closed"));
+    expect(msg).toBeDefined();
+  });
+  it("warns when a passed-through [i] stays open across the markdown emphasis around it (finding 3)", () => {
+    const r = fromMarkdown("**[i]x**[/i]");
+    const msg = r.lost.find((l) => l.message.includes("Close tags in reverse order"));
+    expect(msg).toBeDefined();
+  });
+  it("adds no extra loss for a clean round trip with passed-through BBCode (finding 3)", () => {
+    const r = fromMarkdown("say [b]hi[/b]");
+    expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent", start: 4, end: 13 })]);
+  });
+  it("reports over-limit on bracket-free output via the cheap length check (finding 3)", () => {
+    const r = fromMarkdown("a".repeat(70_000));
+    const over = r.lost.find((l) => l.message.includes("characters; osu! allows"));
+    expect(over).toBeDefined();
+    expect(over?.message).toContain("70000 characters");
+    expect(over?.start).toBe(0);
+  });
+  it("adds no extra loss for the never-lint-errors sample (finding 3)", () => {
+    const sample =
+      "# T\n\n**b *i* b** ~~s~~\n\n> q\n\n- a\n  - b\n\n```\n[b]\n```\n\n| a |\n|---|\n| 1 |";
+    expect(fromMarkdown(sample).lost).toEqual([expect.objectContaining({ code: "table" })]);
+  });
+
   it("scans typed-tag warnings in roughly linear time (finding 6)", () => {
     const n = 4000;
     const parts: string[] = [];
@@ -122,6 +169,11 @@ describe("fromMarkdown", () => {
     const r = fromMarkdown(sample);
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(1000);
-    expect(r.lost.filter((l) => l.code === "no-equivalent")).toHaveLength(n);
+    // The sample is long enough to also trip the over-limit lint check (finding 3), which adds
+    // one more no-equivalent loss beyond the n typed-tag warnings this test is really after.
+    const typedTagWarnings = r.lost.filter(
+      (l) => l.code === "no-equivalent" && l.message.includes("looks like BBCode"),
+    );
+    expect(typedTagWarnings).toHaveLength(n);
   });
 });

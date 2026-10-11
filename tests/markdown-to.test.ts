@@ -10,7 +10,6 @@ describe("markdown basics", () => {
       "no-equivalent",
       "table",
       "html",
-      "nested-list-flattened",
       "heading-level",
       "footnote",
       "reference-link-unresolved",
@@ -34,6 +33,10 @@ const codes = (s: string) => toMarkdown(s).lost.map((l) => l.code);
 describe("toMarkdown", () => {
   it("handles empty input", () => {
     expect(toMarkdown("")).toEqual({ output: "", lost: [] });
+  });
+  it("handles whitespace-only input like empty input", () => {
+    expect(toMarkdown("  \n")).toEqual({ output: "", lost: [] });
+    expect(toMarkdown("\n\n \t\n")).toEqual({ output: "", lost: [] });
   });
   it("maps inline styles", () => {
     expect(md("[b]a[/b] [i]b[/i] [s]c[/s] [strike]d[/strike]")).toBe("**a** *b* ~~c~~ ~~d~~");
@@ -105,5 +108,30 @@ describe("toMarkdown", () => {
     const r = toMarkdown("[imagemap]\nhttps://a.b/i.png\n0 0 50 50 https://a.b/ x\n[/imagemap]");
     expect(r.output).toBe("![](https://a.b/i.png)\n- [x](https://a.b/)");
     expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent" })]);
+  });
+  it("reads a youtube id out of a full link instead of injecting it raw", () => {
+    expect(md("[youtube]https://youtu.be/abc[/youtube]")).toBe(
+      "<https://www.youtube.com/watch?v=abc>",
+    );
+  });
+  it("escapes youtube content with no recognizable id instead of injecting it raw", () => {
+    const r = toMarkdown("[youtube]a b [x](javascript:1)[/youtube]");
+    expect(r.output).not.toMatch(/(?<!\\)\]\(/);
+    expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent" })]);
+  });
+  it("percent-encodes ) in a url destination", () => {
+    expect(md("[url=http://a.com/)x]y[/url]")).toBe("[y](http://a.com/%29x)");
+  });
+  it("percent-encodes a space in a url destination", () => {
+    expect(md("[url=http://a.com/ x]y[/url]")).toBe("[y](http://a.com/%20x)");
+  });
+  it("percent-encodes > in a bare url autolink", () => {
+    expect(md("[url]http://a.com/>x[/url]")).toBe("<http://a.com/%3Ex>");
+  });
+  it("percent-encodes a space in an img destination", () => {
+    expect(md("[img]http://a.com/a b.png[/img]")).toBe("![](http://a.com/a%20b.png)");
+  });
+  it("keeps link text with a ] escaped", () => {
+    expect(md("[url=http://a.com]a]b[/url]")).toBe("[a\\]b](http://a.com)");
   });
 });

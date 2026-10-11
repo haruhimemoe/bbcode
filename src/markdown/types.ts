@@ -12,7 +12,6 @@ export const LOSS_CODES = Object.freeze([
   "no-equivalent",
   "table",
   "html",
-  "nested-list-flattened",
   "heading-level",
   "footnote",
   "reference-link-unresolved",

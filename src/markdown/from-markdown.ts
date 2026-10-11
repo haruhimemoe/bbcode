@@ -7,7 +7,9 @@
  * @modified Sun Oct 11, 2026
  */
 
-import { LIMITS } from "../limits.js";
+import type { TagNode } from "../ast.js";
+import { count, LIMITS } from "../limits.js";
+import { lint } from "../lint/index.js";
 import { parse } from "../parse.js";
 import { parseBlocks } from "./blocks.js";
 import { parseInlines } from "./inlines.js";
@@ -320,12 +322,17 @@ export const fromMarkdown = (markdown: string, options: FromMarkdownOptions = {}
   // the whole document in O(n + m) instead of a range scan per tag.
   // A BBCode tag node can't exist without a `[` either, so this whole pass (parsing the raw
   // markdown a third time, just to look for stray tags) is skippable under the same hasBracket
-  // guard as above.
+  // guard as above. NOTE for future passes: any new pass added here that can only ever find
+  // something when the input has a `[` (a bracket-dependent pass, like this one and the two
+  // blankOut passes above) must be gated by `hasBracket` the same way. A pass that can fire on
+  // bracket-free input (like the lint pass just below, because of `over-limit`) must not be.
+  const sourceTags: TagNode[] = [];
   if (hasBracket) {
     const ranges = ctx.codeRanges.slice().sort((a, b) => a[0] - b[0]);
     let ri = 0;
     for (const node of parse(markdown).children) {
       if (node.type !== "tag") continue;
+      sourceTags.push(node);
       while (ri < ranges.length && (ranges[ri] as [number, number])[1] <= node.start) ri++;
       const range = ranges[ri];
       const covered = range !== undefined && range[0] <= node.start && node.end <= range[1];
@@ -339,6 +346,70 @@ export const fromMarkdown = (markdown: string, options: FromMarkdownOptions = {}
       );
     }
   }
+
+  // Typed BBCode passes through unvalidated (see inlineOf/blockOf above), so the output can
+  // contain a tag osu! itself would reject or mangle (a bad [size], an unclosed [b], an [img]
+  // with a scheme osu! refuses...). lint() is the thing that already knows every one of those
+  // shapes, so instead of re-deriving them here, run it once against the finished output and
+  // surface each `error` diagnostic as a loss. This never changes `output` - it only reads it.
+  //
+  // lint's offsets point into `output`, not `markdown`, and the two can differ (reformatted
+  // markdown, blanked definitions). There's no exact source span for an output-side offset, so
+  // this is an approximation: find a typed-BBCode tag in the source (the same `sourceTags` just
+  // built, since passthrough text is copied verbatim, the offending slice of `output` is also a
+  // substring of that tag's source text when it came from one) and use its span; otherwise fall
+  // back to the whole input.
+  //
+  // Running the full lint() is only worth it when the source had a `[` (hasBracket): every tag
+  // this function itself emits (headings, bold, lists, quotes...) is always well-formed and
+  // closed by construction, so the only `error` lint could still find on bracket-free input is
+  // over-limit, which is a cheap, content-independent length check. A heavily nested bracket-free
+  // input (hostile, or just a long list) can make `output` huge; paying for a full diagnostic
+  // pass over it would be a quadratic-ish surprise for a case that structurally cannot have any
+  // other error, so that case gets the cheap check directly instead of a full lint() call.
+  const errors = hasBracket
+    ? lint(output).filter((d) => d.severity === "error")
+    : (() => {
+        // `output.length` (UTF-16 code units) is always >= the code-point count `count()`
+        // computes, so when it's within the limit, `count()` would be too: skip its per-code-point
+        // loop entirely for the common case. Past the limit, counting precisely is normally cheap
+        // too (one pass over the overage), except a bracket-free input can still blow `output` up
+        // to tens of millions of characters (deeply nested lists/quotes); past a generous multiple
+        // of the limit, report the UTF-16 length instead of paying for that pass; a post that far
+        // over doesn't need an exact figure to know it must be cut drastically.
+        if (output.length <= LIMITS.forumPost) return [];
+        const precise = output.length <= LIMITS.forumPost * 10;
+        const counted = precise ? count(output) : null;
+        const length = counted ? counted.length : output.length;
+        if (length <= LIMITS.forumPost) return [];
+        return [
+          {
+            code: "over-limit" as const,
+            severity: "error" as const,
+            message: `${length} characters; osu! allows ${LIMITS.forumPost}. Cut ${length - LIMITS.forumPost}.`,
+            start: 0,
+            end: output.length,
+          },
+        ];
+      })();
+  if (errors.length > 0) {
+    const seen = new Set(ctx.lost.map((l) => `${l.code}:${l.start}:${l.end}:${l.message}`));
+    for (const d of errors) {
+      const offending = output.slice(d.start, d.end);
+      const match =
+        offending === ""
+          ? undefined
+          : sourceTags.find((t) => markdown.slice(t.start, t.end).includes(offending));
+      const start = match ? match.start : 0;
+      const end = match ? match.end : markdown.length;
+      const message = `osu! will reject or misread this: ${d.message}`;
+      const key = `no-equivalent:${start}:${end}:${message}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      lose(ctx, "no-equivalent", message, start, end);
+    }
+  }
+
   ctx.lost.sort((a, b) => a.start - b.start);
   return { output, lost: ctx.lost };
 };
