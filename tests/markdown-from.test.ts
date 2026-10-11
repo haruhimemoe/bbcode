@@ -106,6 +106,13 @@ describe("fromMarkdown", () => {
       "osu! has no footnotes, dropped the note text.",
     ]);
   });
+  it("reports a collapsed reference link ([abc][]) with no definition as unresolved", () => {
+    expect(codes("[abc][]")).toEqual(["reference-link-unresolved"]);
+    expect(bb("[abc][]")).toBe("[abc][]");
+  });
+  it("reports a bare footnote reference with no definition", () => {
+    expect(codes("see [^1] here")).toEqual(["footnote"]);
+  });
   it("scans typed-tag warnings in roughly linear time (finding 6)", () => {
     const n = 4000;
     const parts: string[] = [];

@@ -93,4 +93,17 @@ describe("toMarkdown", () => {
     expect(md("[spoilerbox]x[/spoilerbox]")).toBe("**Spoiler**\n\nx");
     expect(codes("[spoilerbox]x[/spoilerbox]")).toEqual(["no-equivalent"]);
   });
+  it("renders spoilerbox as a quote under boxStyle: quote", () => {
+    expect(toMarkdown("[spoilerbox]x[/spoilerbox]", { boxStyle: "quote" }).output).toBe(
+      "> **Spoiler**\n> x",
+    );
+  });
+  it("renders audio as an autolink", () => {
+    expect(md("[audio]https://a.b/c.mp3[/audio]")).toBe("<https://a.b/c.mp3>");
+  });
+  it("renders an imagemap as an image plus a link list, with a loss", () => {
+    const r = toMarkdown("[imagemap]\nhttps://a.b/i.png\n0 0 50 50 https://a.b/ x\n[/imagemap]");
+    expect(r.output).toBe("![](https://a.b/i.png)\n- [x](https://a.b/)");
+    expect(r.lost).toEqual([expect.objectContaining({ code: "no-equivalent" })]);
+  });
 });

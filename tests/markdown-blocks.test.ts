@@ -81,6 +81,20 @@ describe("parseBlocks", () => {
     expect(kinds("- a\n```\nx\n```")).toEqual(["list", "code"]);
     expect(kinds("- a\n---")).toEqual(["list", "rule"]);
   });
+  it("trims trailing blank lines off an indented code block", () => {
+    expect(parseBlocks("    a\n\nx", 32)[0]).toMatchObject({ kind: "code", value: "a" });
+  });
+  it("continues a list item's paragraph across a blank line when the next line is indented", () => {
+    const [l] = parseBlocks("- a\n\n  b", 32);
+    const items = (l as { items: { kind: string }[][] }).items;
+    expect(items).toHaveLength(1);
+    expect(items[0]?.map((b) => b.kind)).toEqual(["paragraph", "paragraph"]);
+  });
+  it("joins two same-marker items separated by a single blank line into one loose list", () => {
+    const [l] = parseBlocks("- a\n\n- b", 32);
+    expect(l).toMatchObject({ kind: "list" });
+    expect((l as { items: unknown[][] }).items).toHaveLength(2);
+  });
   it("pads/truncates table rows to the header's column count", () => {
     expect(parseBlocks("| a | b |\n|---|---|\n| 1 |\n| 1 | 2 | 3 |", 32)[0]).toMatchObject({
       kind: "table",

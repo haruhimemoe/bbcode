@@ -80,6 +80,19 @@ describe("parseInlines", () => {
     expect(parseInlines("[t][x]", 0, refs)[0]).toMatchObject({ kind: "link", href: "https://x.y" });
     expect(parseInlines("[t][missing]", 0, refs)[0]).toMatchObject({ kind: "text" });
   });
+  it("demotes an outer bracket to text when an inner one resolves to a link (no nested links)", () => {
+    expect(p("[[a](u)]")).toEqual([
+      { kind: "text", value: "[", start: 0, end: 1 },
+      {
+        kind: "link",
+        href: "u",
+        children: [{ kind: "text", value: "a", start: 2, end: 3 }],
+        start: 1,
+        end: 7,
+      },
+      { kind: "text", value: "]", start: 7, end: 8 },
+    ]);
+  });
   it("honors backslash escapes and hard breaks", () => {
     expect(p("\\*a\\*")).toEqual([{ kind: "text", value: "*a*", start: 0, end: 5 }]);
     expect(p("a  \nb").map((n) => n.kind)).toEqual(["text", "break", "text"]);
