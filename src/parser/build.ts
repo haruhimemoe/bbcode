@@ -94,6 +94,16 @@ export function build(src: string): BuildResult {
     return short ? lineEnd(openEnd) : src.length;
   };
   const insert = (at: number, tag: string) => ({ start: at, end: at, text: `[/${tag}]` });
+  /**
+   * Tags open at the end of the text unwind innermost first; an outer one never closes before
+   * an inner one's fix (or a tag inside it that closed), or the fixes would cross.
+   */
+  let eofFloor = 0;
+  const eofFix = (node: TagNode, openEnd: number) => {
+    const inner = node.children.reduce((end, child) => (child.type === "tag" ? child.end : end), 0);
+    eofFloor = Math.max(eofClose(node.tag, openEnd), inner, eofFloor);
+    return insert(eofFloor, node.tag);
+  };
 
   /**
    * Pops the top frame as text. An unclosed box instead ends at `at`: osu! turns every box
@@ -115,7 +125,7 @@ export function build(src: string): BuildResult {
       const own = `[/${node.tag}]`;
       const fix =
         reason === "eof"
-          ? insert(eofClose(node.tag, end), node.tag)
+          ? eofFix(node, end)
           : only && src.startsWith(own, closeEnd)
             ? { start: at, end: closeEnd + own.length, text: own + src.slice(at, closeEnd) }
             : insert(at, node.tag);
@@ -133,6 +143,13 @@ export function build(src: string): BuildResult {
     return true;
   };
 
+  /** An unclosed raw tag's fix, unless closing it would wrap a `[` (a tag, or what it refuses). */
+  const rawFix = (tag: string, openEnd: number) => {
+    const at = eofClose(tag, openEnd);
+    const inline = at < src.length || findTag(tag)?.display === "inline";
+    return inline && src.slice(openEnd, at).includes("[") ? {} : { fix: insert(at, tag) };
+  };
+
   const openRaw = (tok: Token, rule: Rule): number => {
     const closeTag = `[/${tok.tag}]`;
     const closeAt = scan.find(closeTag, tok.end);
@@ -143,7 +160,7 @@ export function build(src: string): BuildResult {
         start: tok.start,
         end: tok.end,
         reason: "eof",
-        fix: insert(eofClose(tok.tag, tok.end), tok.tag),
+        ...rawFix(tok.tag, tok.end),
       });
       return tok.end;
     }
@@ -190,8 +207,11 @@ export function build(src: string): BuildResult {
         const closeAt = scan.find(`[/${tok.tag}]`, tok.end);
         const empty = tok.tag === "url" && closeAt === tok.end;
         if (closeAt < 0 || empty || nextNewline(scan.find, tok.end) < closeAt) {
-          // Only a tag with no closing anywhere after it has an obvious one.
-          const fix = closeAt < 0 ? insert(lineEnd(tok.end), tok.tag) : undefined;
+          // Only a tag with no closing anywhere after it, and no other tag after it on its line
+          // (which a closing at the line's end could cross), has an obvious one.
+          const end = lineEnd(tok.end);
+          const clear = closeAt < 0 && !src.slice(tok.end, end).includes("[");
+          const fix = clear ? insert(end, tok.tag) : undefined;
           events.push({
             kind: "unclosed",
             tag: tok.tag,

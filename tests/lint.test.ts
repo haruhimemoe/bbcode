@@ -53,6 +53,34 @@ describe("unclosed-tag fixes", () => {
     expect(found.every((d) => d.fix === undefined)).toBe(true);
   });
 
+  /** Every fix at once: later spots first, and at one spot the outer tag's before the inner's. */
+  const fixAll = (text: string): string =>
+    lint(text)
+      .flatMap((d) => (d.fix ? [{ fix: d.fix, start: d.start }] : []))
+      .sort((a, b) => b.fix.start - a.fix.start || a.start - b.start)
+      .reduce((out, { fix }) => applyFix(out, fix), text);
+
+  it.each([
+    ["[b]x[centre]y\nz", "[b]x[centre]y\nz[/centre][/b]"],
+    ["[b][list][*]a\n[*]b", "[b][list][*]a\n[*]b[/list][/b]"],
+    ["[b]x [code]a\nb[/code]", "[b]x [code]a\nb[/code][/b]"],
+    ["[i]a [quote]b\nc[/quote]", "[i]a [quote]b\nc[/quote][/i]"],
+  ])("an outer tag closes after what it holds: %j", (text, fixed) => {
+    expect(fixAll(text)).toBe(fixed);
+    expect(lint(fixed)).toEqual([]);
+  });
+
+  it("gives an unclosed inline raw tag no fix when a [ follows on its line", () => {
+    const found = lint("[img]x [b]y[/b]").find((d) => d.code === "unclosed-tag");
+    expect(found?.fix).toBeUndefined();
+  });
+
+  it("gives a one-line tag no fix when another tag starts later on its line", () => {
+    const [heading] = lint("[heading]a[b]b\nc[/b]");
+    expect(heading?.code).toBe("unclosed-tag");
+    expect(heading?.fix).toBeUndefined();
+  });
+
   it("two tags open at the end of one line both close there", () => {
     const fixes = lint("[i][b]x").map((d) => d.fix);
     expect(fixes).toEqual([

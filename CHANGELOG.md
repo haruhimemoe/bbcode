@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-11
+
+### Fixed
+
+- An `unclosed-tag` fix no longer crosses the tags inside it. A tag open at the end of the text now closes after any tag it holds and after the fixes of tags open inside it (`[b]x [code]a\nb[/code]` becomes `[b]x [code]a\nb[/code][/b]`, not `[/b]` inside the code). A one-line tag, or an inline raw tag like `[img]`, gets no fix when a `[` follows it on its line.
+
 ## [0.3.1] - 2026-10-11
 
 ### Added
@@ -75,6 +81,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
 [unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.3.1...HEAD
+[0.3.2]: https://github.com/haruhimemoe/bbcode/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/haruhimemoe/bbcode/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/haruhimemoe/bbcode/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/haruhimemoe/bbcode/compare/v0.2.2...v0.2.3
