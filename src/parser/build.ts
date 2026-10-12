@@ -4,11 +4,12 @@
  *       (see rules.ts) and records why a tag stayed text, so lint can explain it. Internal.
  * @author David @dvhsh (https://dvh.sh)
  * @created Mon Sep 28, 2026
- * @modified Mon Sep 28, 2026
+ * @modified Sun Oct 11, 2026
  */
 
 import type { Document, Node, TagNode } from "../ast.js";
 import { LIMITS } from "../limits.js";
+import { findTag } from "../tags.js";
 import { nextNewline, scanner } from "./find.js";
 import { flattenInto, openNode, pushNode, pushText } from "./nodes.js";
 import { type RawProblem, RULES, type Rule } from "./rules.js";
@@ -22,6 +23,8 @@ export type ParseEvent =
       start: number;
       end: number;
       reason: "eof" | "crossed" | "line" | "box";
+      /** The obvious closing, when there is one. */
+      fix?: { start: number; end: number; text: string };
     }
   | { kind: "stray-close"; tag: string; start: number; end: number }
   | { kind: "self-nested"; tag: string; start: number; end: number }
@@ -79,11 +82,26 @@ export function build(src: string): BuildResult {
     node.end = end;
     pushNode(top().children, node);
   };
+  /** Where a line that has `from` in it ends (before its newline, or at the end of the text). */
+  const lineEnd = (from: number): number => Math.min(nextNewline(scan.find, from), src.length);
+  /**
+   * Where a tag open at the end of the text closes: inline and single-line tags at the end of
+   * their line, block tags at the end of the text.
+   */
+  const eofClose = (tag: string, openEnd: number): number => {
+    const spec = findTag(tag);
+    const short = spec?.display === "inline" || spec?.singleLine === true;
+    return short ? lineEnd(openEnd) : src.length;
+  };
+  const insert = (at: number, tag: string) => ({ start: at, end: at, text: `[/${tag}]` });
+
   /**
    * Pops the top frame as text. An unclosed box instead ends at `at`: osu! turns every box
-   * opening into markup, and the cleanup closes it where the element holding it ends.
+   * opening into markup, and the cleanup closes it where the element holding it ends. A tag
+   * crossed by the close at `at..closeEnd` gets its closing put before it, or swapped with it
+   * when it's the only one crossed and its own close comes right after.
    */
-  const unwind = (reason: "eof" | "crossed", at: number): void => {
+  const unwind = (reason: "eof" | "crossed", at: number, closeEnd = at, only = false): void => {
     const last = top().node as TagNode;
     if (last.name === "box" || last.name === "spoilerbox") {
       const end = last.start + last.open.length;
@@ -94,7 +112,14 @@ export function build(src: string): BuildResult {
     const node = (stack.pop() as Frame).node as TagNode;
     if (node.name !== "*") {
       const end = node.start + node.open.length;
-      events.push({ kind: "unclosed", tag: node.tag, start: node.start, end, reason });
+      const own = `[/${node.tag}]`;
+      const fix =
+        reason === "eof"
+          ? insert(eofClose(node.tag, end), node.tag)
+          : only && src.startsWith(own, closeEnd)
+            ? { start: at, end: closeEnd + own.length, text: own + src.slice(at, closeEnd) }
+            : insert(at, node.tag);
+      events.push({ kind: "unclosed", tag: node.tag, start: node.start, end, reason, fix });
     }
     flattenInto(top().children, node);
   };
@@ -118,6 +143,7 @@ export function build(src: string): BuildResult {
         start: tok.start,
         end: tok.end,
         reason: "eof",
+        fix: insert(eofClose(tok.tag, tok.end), tok.tag),
       });
       return tok.end;
     }
@@ -164,12 +190,15 @@ export function build(src: string): BuildResult {
         const closeAt = scan.find(`[/${tok.tag}]`, tok.end);
         const empty = tok.tag === "url" && closeAt === tok.end;
         if (closeAt < 0 || empty || nextNewline(scan.find, tok.end) < closeAt) {
+          // Only a tag with no closing anywhere after it has an obvious one.
+          const fix = closeAt < 0 ? insert(lineEnd(tok.end), tok.tag) : undefined;
           events.push({
             kind: "unclosed",
             tag: tok.tag,
             start: tok.start,
             end: tok.end,
             reason: "line",
+            ...(fix ? { fix } : {}),
           });
           return tok.end;
         }
@@ -214,10 +243,11 @@ export function build(src: string): BuildResult {
       return tok.end;
     }
     flush(tok.start);
+    const crossed = stack.slice(idx + 1).filter((f) => f.node?.name !== "*").length;
     while (stack.length - 1 > idx) {
       const implicitItem = top().node?.name === "*" && stack.length - 2 === idx;
       if (implicitItem) finish(tok.start, null);
-      else unwind("crossed", tok.start);
+      else unwind("crossed", tok.start, tok.end, crossed === 1);
     }
     finish(tok.end, src.slice(tok.start, tok.end));
     textStart = tok.end;

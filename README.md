@@ -325,7 +325,7 @@ Also like osu!:
 
 | Code | Severity | When | Fix |
 | --- | --- | --- | --- |
-| `unclosed-tag` | error | An opening tag with no close (or closed after the tag around it, or on another line for one-line tags) | |
+| `unclosed-tag` | error | An opening tag with no close (or closed after the tag around it, or on another line for one-line tags) | closes it: before the tag that crossed it (or swaps the two closes); a one-line tag with no close after it, at the end of its line; one open at the end of the text, at the end of its line (inline tags) or of the text (block tags). None when a close exists on a later line. Several can insert at one spot: apply the later-opened tag's first. |
 | `unclosed-tag` | warning | A `[box]` or `[spoilerbox]` with no close: it runs to the end of what holds it | |
 | `stray-close` | warning | A closing tag with no opening tag | removes it |
 | `unknown-tag` | warning | `[center]`, wrong case (`[B]`), tags from other forums (`[font]`, `[table]`...), an argument a tag doesn't take, `[quote=name]` without quotes, `[*]` outside a list | `[centre]`, lowercase, drop the argument, add quotes |

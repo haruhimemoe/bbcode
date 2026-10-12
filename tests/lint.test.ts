@@ -18,14 +18,58 @@ function brief(text: string): string[] {
   });
 }
 
+describe("unclosed-tag fixes", () => {
+  it.each([
+    // crossed: closes right before the tag that crossed it, or swaps the two closes
+    ["[b][i]x[/b]", "[b][i]x[/i][/b]"],
+    ["[b][i]x[/b] y", "[b][i]x[/i][/b] y"],
+    ["[b][i]x[/b][/i]", "[b][i]x[/i][/b]"],
+    // line: a single-line tag with no closing tag anywhere after it
+    ["[heading]Title\nbody", "[heading]Title[/heading]\nbody"],
+    ["[url=https://a.b]link\nmore", "[url=https://a.b]link[/url]\nmore"],
+    // eof: inline tags close at the end of their line, block tags at the end of the text
+    ["[b]bold\nplain", "[b]bold[/b]\nplain"],
+    ["[centre]a\nb", "[centre]a\nb[/centre]"],
+    ["[code]a\nb", "[code]a\nb[/code]"],
+    ["[img]https://a.b/c.png\nnext", "[img]https://a.b/c.png[/img]\nnext"],
+  ])("%j becomes %j", (text, fixed) => {
+    const found = lint(text).filter((d) => d.code === "unclosed-tag");
+    expect(found).toHaveLength(1);
+    const fix = found[0]?.fix;
+    expect(fix).toBeDefined();
+    const out = applyFix(text, fix as NonNullable<typeof fix>);
+    expect(out).toBe(fixed);
+    expect(lint(out).filter((d) => d.code === "unclosed-tag")).toEqual([]);
+  });
+
+  it.each([
+    ["[c]a\nb[/c]"],
+    ["[url=https://a.b][/url]"],
+    ["[box=a]x"],
+    ["[profile]a\nb[/profile]"],
+  ])("%j gets no fix", (text) => {
+    const found = lint(text).filter((d) => d.code === "unclosed-tag");
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((d) => d.fix === undefined)).toBe(true);
+  });
+
+  it("two tags open at the end of one line both close there", () => {
+    const fixes = lint("[i][b]x").map((d) => d.fix);
+    expect(fixes).toEqual([
+      { start: 7, end: 7, text: "[/i]" },
+      { start: 7, end: 7, text: "[/b]" },
+    ]);
+  });
+});
+
 describe("each code", () => {
   it.each([
-    ["[b]x", ['unclosed-tag error "[b]"']],
-    ["[b][i]x[/b][/i]", ['unclosed-tag error "[i]"']],
+    ["[b]x", ['unclosed-tag error "[b]" -> "[b]x[/b]"']],
+    ["[b][i]x[/b][/i]", ['unclosed-tag error "[i]" -> "[b][i]x[/i][/b]"']],
     ["[c]a\nb[/c]", ['unclosed-tag error "[c]"']],
     ["[code][/code]", ['unclosed-tag error "[code]"']],
     ["[profile]a\nb[/profile]", ['unclosed-tag error "[profile]"']],
-    ["[img]x", ['unclosed-tag error "[img]"']],
+    ["[img]x", ['unclosed-tag error "[img]" -> "[img]x[/img]"']],
     ["[box=a]x", ['unclosed-tag warning "[box=a]"']],
     ["[quote][spoilerbox]x[/quote]", ['unclosed-tag warning "[spoilerbox]"']],
     ["x[/b]", ['stray-close warning "[/b]" -> "x"']],

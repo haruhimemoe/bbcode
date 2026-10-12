@@ -4,7 +4,7 @@
  *       content) into diagnostics. Internal.
  * @author David @dvhsh (https://dvh.sh)
  * @created Mon Sep 28, 2026
- * @modified Mon Sep 28, 2026
+ * @modified Sun Oct 11, 2026
  */
 
 import { LIMITS } from "../limits.js";
@@ -25,7 +25,15 @@ function unclosed(e: Extract<ParseEvent, { kind: "unclosed" }>): Diagnostic {
       : e.reason === "crossed"
         ? `${tag} is still open when the tag around it closes, so osu! shows it as text. Close tags in reverse order.`
         : `${tag} is never closed, so osu! shows it as text.`;
-  return { code: "unclosed-tag", severity: "error", message, start: e.start, end: e.end };
+  const d: Diagnostic = {
+    code: "unclosed-tag",
+    severity: "error",
+    message,
+    start: e.start,
+    end: e.end,
+  };
+  if (e.fix) d.fix = e.fix;
+  return d;
 }
 
 function raw(e: Extract<ParseEvent, { kind: "raw" }>, src: string): Diagnostic {

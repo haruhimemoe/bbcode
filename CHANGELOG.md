@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-11
+
+### Added
+
+- `unclosed-tag` diagnostics carry a fix when the closing is obvious. A tag crossed by the close of the tag around it closes right before that close, or swaps with it when its own close comes right after (`[b][i]x[/b][/i]` becomes `[b][i]x[/i][/b]`). A one-line tag with no close after it closes at the end of its line. A tag still open at the end of the text closes at the end of its line (inline tags) or at the end of the text (block tags). No fix when a close exists on a later line.
+
 ## [0.3.0] - 2026-10-11
 
 ### Added
@@ -68,7 +74,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./flags`: `COUNTRIES` (ISO 3166-1 alpha-2), `findCountry`, `searchCountries`, `flagUrl` and `normalizeCountryCode`.
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
-[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/haruhimemoe/bbcode/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/haruhimemoe/bbcode/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/haruhimemoe/bbcode/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/haruhimemoe/bbcode/compare/v0.2.1...v0.2.2
