@@ -50,11 +50,12 @@ export interface TemplateFieldsResult {
 
 /** `{{key}}`, spaces allowed inside the braces. */
 const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
-/** A section's opening marker, `{{#key}}` or `{{#key|other}}` (kept when either fills). */
-const SECTION_OPEN = /\{\{\s*#\s*([A-Za-z0-9_.|-]+)\s*\}\}/g;
-/** An innermost section: `{{#key}}`, text without another opening, `{{/key}}`, a line break. */
-const SECTION =
-  /\{\{\s*#\s*([A-Za-z0-9_.|-]+)\s*\}\}((?:(?!\{\{\s*#)[\s\S])*?)\{\{\s*\/\s*\1\s*\}\}(\n?)/g;
+/** A section's key list: one key, or keys joined by `|` (kept when any fills). */
+const KEY_LIST = "[A-Za-z0-9_.-]+(?:\\|[A-Za-z0-9_.-]+)*";
+/** A section's opening marker, `{{#key}}` or `{{#key|other}}`. */
+const SECTION_OPEN = new RegExp(`\\{\\{\\s*#\\s*(${KEY_LIST})\\s*\\}\\}`, "g");
+/** Either section marker: `{{#keys}}` opens, `{{/keys}}` closes. */
+const MARKER = new RegExp(`\\{\\{\\s*([#/])\\s*(${KEY_LIST})\\s*\\}\\}`, "g");
 const KEY = /^[A-Za-z0-9_.-]+$/;
 
 /**
@@ -132,35 +133,101 @@ export function fillTemplate(
   return { text, errors };
 }
 
-const atLineStart = (text: string, at: number): boolean => at === 0 || text[at - 1] === "\n";
+/** A section found in a body: its keys, where its markers sit, and the sections inside it. */
+interface Section {
+  keys: string;
+  start: number;
+  openEnd: number;
+  closeStart: number;
+  end: number;
+  children: Section[];
+}
+
+const byStart = (a: Section, b: Section): number => a.start - b.start;
+
+/**
+ * Pairs every `{{#keys}}` with the next `{{/keys}}` of the same keys that closes it, in one
+ * pass. An opening marker never closed, and a closing one with no opening, are plain text; the
+ * sections inside an unclosed one belong to what holds it.
+ */
+function parseSections(src: string): Section[] {
+  const root: Section[] = [];
+  const stack: { keys: string; start: number; openEnd: number; children: Section[] }[] = [];
+  const holder = (): Section[] => stack.at(-1)?.children ?? root;
+  for (const m of src.matchAll(MARKER)) {
+    const [whole, kind, keys] = m as unknown as [string, string, string];
+    if (kind === "#") {
+      stack.push({ keys, start: m.index, openEnd: m.index + whole.length, children: [] });
+      continue;
+    }
+    const at = stack.findLastIndex((frame) => frame.keys === keys);
+    if (at < 0) continue;
+    const frame = stack[at] as (typeof stack)[number];
+    for (const lost of stack.splice(at + 1)) frame.children.push(...lost.children);
+    stack.pop();
+    holder().push({
+      ...frame,
+      children: frame.children.sort(byStart),
+      closeStart: m.index,
+      end: m.index + whole.length,
+    });
+  }
+  // Openings never closed are text: what they held belongs to what holds them.
+  for (let lost = stack.pop(); lost; lost = stack.pop()) holder().push(...lost.children);
+  return root.sort(byStart);
+}
+
+/** How long the line break right at `at` is: 2 for CRLF, 1 for LF, 0 for none. */
+const breakAt = (src: string, at: number): number =>
+  src.startsWith("\r\n", at) ? 2 : src[at] === "\n" ? 1 : 0;
 
 /**
  * Keeps each section whose field filled to something (any of them, for `{{#a|b}}`) and drops
- * the rest, innermost first. A section that fills whole lines takes its own line breaks with it.
- * Sections naming a field that isn't declared or didn't fill stay as written.
+ * the rest. A section that fills whole lines takes its own line breaks with it, CRLF or LF.
+ * Sections naming a field that isn't declared or didn't fill stay as written (the sections
+ * inside them still resolve).
  */
-function fillSections(body: string, filled: ReadonlyMap<string, string>): string {
-  let text = body;
-  for (let changed = true; changed; ) {
-    changed = false;
-    text = text.replace(
-      SECTION,
-      (whole, key: string, inner: string, newline: string, at: number, all: string) => {
-        const values = key.split("|").map((one) => filled.get(one));
-        if (values.some((one) => one === undefined)) return whole;
-        const value = values.some((one) => one !== "") ? "set" : "";
-        changed = true;
-        const lineStart = atLineStart(all, at);
-        const lineEnd = newline !== "" || at + whole.length === all.length;
-        if (value === "") return lineStart && lineEnd ? "" : newline;
-        let kept = inner;
-        if (lineStart && kept.startsWith("\n")) kept = kept.slice(1);
-        if (lineEnd && kept.endsWith("\n")) kept = kept.slice(0, -1);
-        return kept + newline;
-      },
-    );
+function renderSections(
+  src: string,
+  from: number,
+  to: number,
+  sections: readonly Section[],
+  filled: ReadonlyMap<string, string>,
+): string {
+  let out = "";
+  let pos = from;
+  for (const section of sections) {
+    out += src.slice(pos, section.start);
+    pos = section.end;
+    const inner = () =>
+      renderSections(src, section.openEnd, section.closeStart, section.children, filled);
+    const values = section.keys.split("|").map((key) => filled.get(key));
+    if (values.some((value) => value === undefined)) {
+      out += src.slice(section.start, section.openEnd) + inner();
+      out += src.slice(section.closeStart, section.end);
+      continue;
+    }
+    const lineBreak = breakAt(src, section.end);
+    const lineStart = section.start === 0 || src[section.start - 1] === "\n";
+    const lineEnd = lineBreak > 0 || section.end === src.length;
+    if (values.every((value) => value === "")) {
+      if (!lineStart || !lineEnd) continue;
+      pos = section.end + lineBreak;
+      // A whole-line section at the very end also takes the line break before it.
+      if (lineBreak === 0) out = out.replace(/\r?\n$/, "");
+      continue;
+    }
+    let kept = inner();
+    if (lineStart) kept = kept.replace(/^\r?\n/, "");
+    if (lineEnd) kept = kept.replace(/\r?\n$/, "");
+    out += kept;
   }
-  return text;
+  return out + src.slice(pos, to);
+}
+
+/** Resolves every section in `body` against the filled values. */
+function fillSections(body: string, filled: ReadonlyMap<string, string>): string {
+  return renderSections(body, 0, body.length, parseSections(body), filled);
 }
 
 export { FIELD_KINDS, type FieldKind, type FieldValue } from "./format.js";

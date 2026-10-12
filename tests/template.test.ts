@@ -164,6 +164,20 @@ describe("sections", () => {
     );
   });
 
+  it("resolves an outer section past an inner one it can't", () => {
+    expect(fill("{{#note}}A {{#ghost}}g{{/ghost}}{{/note}}", {}).text).toBe("");
+    expect(fill("{{#note}}A {{#link}}x{{/note}}", { note: "n" }).text).toBe("A {{#link}}x");
+  });
+
+  it("handles CRLF line breaks and a whole-line section at the very end", () => {
+    expect(fill("top\r\n{{#note}}x{{/note}}\r\nend", {}).text).toBe("top\r\nend");
+    expect(fill("top\n{{#note}}x{{/note}}", {}).text).toBe("top");
+  });
+
+  it("ignores section markers with an empty key", () => {
+    expect(templateFields("{{#note|}}x{{/note|}}", fields).keys).toEqual([]);
+  });
+
   it("counts section keys as used", () => {
     expect(templateFields("{{#link|note}}x{{/link|note}} {{name}}", fields)).toEqual({
       keys: ["link", "note", "name"],
