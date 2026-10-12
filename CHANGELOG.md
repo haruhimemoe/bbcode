@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Template sections: `{{#key}}...{{/key}}` keeps its content when the field fills to something and drops it when the field is empty, so optional links and images don't leave `[url=]` or `[img][/img]` behind. A section on whole lines takes its line breaks with it. `templateFields` counts section keys as used.
+- Template sections: `{{#key}}...{{/key}}` keeps its content when the field fills to something and drops it when the field is empty, so optional links and images don't leave `[url=]` or `[img][/img]` behind. A section on whole lines takes its line breaks with it. `{{#a|b}}...{{/a|b}}` keeps its content when either field fills. `templateFields` counts section keys as used.
 
 ## [0.3.2] - 2026-10-11
 

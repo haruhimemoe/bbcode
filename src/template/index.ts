@@ -50,11 +50,11 @@ export interface TemplateFieldsResult {
 
 /** `{{key}}`, spaces allowed inside the braces. */
 const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
-/** A section's opening marker, `{{#key}}`. */
-const SECTION_OPEN = /\{\{\s*#\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+/** A section's opening marker, `{{#key}}` or `{{#key|other}}` (kept when either fills). */
+const SECTION_OPEN = /\{\{\s*#\s*([A-Za-z0-9_.|-]+)\s*\}\}/g;
 /** An innermost section: `{{#key}}`, text without another opening, `{{/key}}`, a line break. */
 const SECTION =
-  /\{\{\s*#\s*([A-Za-z0-9_.-]+)\s*\}\}((?:(?!\{\{\s*#)[\s\S])*?)\{\{\s*\/\s*\1\s*\}\}(\n?)/g;
+  /\{\{\s*#\s*([A-Za-z0-9_.|-]+)\s*\}\}((?:(?!\{\{\s*#)[\s\S])*?)\{\{\s*\/\s*\1\s*\}\}(\n?)/g;
 const KEY = /^[A-Za-z0-9_.-]+$/;
 
 /**
@@ -71,7 +71,7 @@ export function templateFields(
   const found = [...body.matchAll(PLACEHOLDER), ...body.matchAll(SECTION_OPEN)].sort(
     (a, b) => a.index - b.index,
   );
-  const keys = [...new Set(found.map((m) => m[1] as string))];
+  const keys = [...new Set(found.flatMap((m) => (m[1] as string).split("|")))];
   const declared = new Set(fields.map((f) => f.key));
   return {
     keys,
@@ -135,9 +135,9 @@ export function fillTemplate(
 const atLineStart = (text: string, at: number): boolean => at === 0 || text[at - 1] === "\n";
 
 /**
- * Keeps each section whose field filled to something and drops the rest, innermost first. A
- * section that fills whole lines takes its own line breaks with it. Sections for fields that
- * aren't declared or didn't fill stay as written.
+ * Keeps each section whose field filled to something (any of them, for `{{#a|b}}`) and drops
+ * the rest, innermost first. A section that fills whole lines takes its own line breaks with it.
+ * Sections naming a field that isn't declared or didn't fill stay as written.
  */
 function fillSections(body: string, filled: ReadonlyMap<string, string>): string {
   let text = body;
@@ -146,8 +146,9 @@ function fillSections(body: string, filled: ReadonlyMap<string, string>): string
     text = text.replace(
       SECTION,
       (whole, key: string, inner: string, newline: string, at: number, all: string) => {
-        const value = filled.get(key);
-        if (value === undefined) return whole;
+        const values = key.split("|").map((one) => filled.get(one));
+        if (values.some((one) => one === undefined)) return whole;
+        const value = values.some((one) => one !== "") ? "set" : "";
         changed = true;
         const lineStart = atLineStart(all, at);
         const lineEnd = newline !== "" || at + whole.length === all.length;

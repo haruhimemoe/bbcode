@@ -248,7 +248,7 @@ A section, `{{#key}}...{{/key}}`, keeps what's inside when `key` fills to someth
 {{#song_link}}[url={{song_link}}]Listen to the song[/url]{{/song_link}}
 ```
 
-A section that fills whole lines (its markers at the start of a line and before a line break) takes its line breaks with it, kept or dropped, so no blank lines are left. Sections of different keys nest. A section whose key isn't declared, or whose field has an error, stays as written, and so does an opening marker with no closing one.
+A section that fills whole lines (its markers at the start of a line and before a line break) takes its line breaks with it, kept or dropped, so no blank lines are left. Sections of different keys nest. `{{#a|b}}...{{/a|b}}` keeps its content when either field fills, for a box that holds two optional lines. A section whose key isn't declared, or whose field has an error, stays as written, and so does an opening marker with no closing one.
 
 `templateFields(body, fields?)` returns `{ keys, undeclared, unused }`: placeholders and section keys in the body, those without a declared field, and declared fields the body never uses. `FIELD_KINDS` lists the kinds.
 

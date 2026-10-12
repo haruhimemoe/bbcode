@@ -155,11 +155,20 @@ describe("sections", () => {
     expect(fill("{{#note}}x", {}).text).toBe("{{#note}}x");
   });
 
+  it("keeps an either-or section when any of its fields has a value", () => {
+    const body = "{{#link|note}}[box=More]{{link}} {{note}}[/box]{{/link|note}}";
+    expect(fill(body, {}).text).toBe("");
+    expect(fill(body, { note: "n" }).text).toBe("[box=More] n[/box]");
+    expect(fill("{{#note|ghost}}x{{/note|ghost}}", {}).text).toBe(
+      "{{#note|ghost}}x{{/note|ghost}}",
+    );
+  });
+
   it("counts section keys as used", () => {
-    expect(templateFields("{{#link}}x{{/link}} {{name}}", fields)).toEqual({
-      keys: ["link", "name"],
+    expect(templateFields("{{#link|note}}x{{/link|note}} {{name}}", fields)).toEqual({
+      keys: ["link", "note", "name"],
       undeclared: [],
-      unused: ["note"],
+      unused: [],
     });
   });
 });
