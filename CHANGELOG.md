@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-11
+
+### Added
+
+- Template sections: `{{#key}}...{{/key}}` keeps its content when the field fills to something and drops it when the field is empty, so optional links and images don't leave `[url=]` or `[img][/img]` behind. A section on whole lines takes its line breaks with it. `templateFields` counts section keys as used.
+
 ## [0.3.2] - 2026-10-11
 
 ### Fixed
@@ -81,6 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `./template`: `fillTemplate`, `templateFields` and `FIELD_KINDS`.
 
 [unreleased]: https://github.com/haruhimemoe/bbcode/compare/v0.3.1...HEAD
+[0.4.0]: https://github.com/haruhimemoe/bbcode/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/haruhimemoe/bbcode/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/haruhimemoe/bbcode/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/haruhimemoe/bbcode/compare/v0.2.3...v0.3.0

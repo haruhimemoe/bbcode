@@ -120,3 +120,46 @@ describe("templateFields", () => {
     expect(Object.isFrozen(FIELD_KINDS)).toBe(true);
   });
 });
+
+describe("sections", () => {
+  const fields: TemplateField[] = [
+    { key: "link", label: "Link", kind: "url" },
+    { key: "name", label: "Name", kind: "text", required: true },
+    { key: "note", label: "Note", kind: "text" },
+  ];
+  const fill = (body: string, values: Record<string, string>) => fillTemplate(body, fields, values);
+
+  it("keeps a section when its field has a value, without the markers", () => {
+    expect(fill("a {{#link}}[url={{link}}]go[/url]{{/link}} b", { link: "https://x.y" }).text).toBe(
+      "a [url=https://x.y]go[/url] b",
+    );
+  });
+
+  it("drops a section when its field is empty, with its line when it fills whole lines", () => {
+    expect(fill("a {{#link}}[url={{link}}]go[/url]{{/link}} b", {}).text).toBe("a  b");
+    expect(fill("top\n{{#link}}\n[url={{link}}]go[/url]\n{{/link}}\nend", {}).text).toBe(
+      "top\nend",
+    );
+    expect(fill("top\n{{#note}}Note: {{note}}{{/note}}\nend", {}).text).toBe("top\nend");
+  });
+
+  it("nests sections of different fields", () => {
+    const body = "{{#note}}[{{note}}{{#link}} {{link}}{{/link}}]{{/note}}";
+    expect(fill(body, { note: "n" }).text).toBe("[n]");
+    expect(fill(body, { note: "n", link: "https://x.y" }).text).toBe("[n https://x.y]");
+  });
+
+  it("leaves sections alone for undeclared fields, fields with errors and unclosed markers", () => {
+    expect(fill("{{#ghost}}x{{/ghost}}", { name: "a" }).text).toBe("{{#ghost}}x{{/ghost}}");
+    expect(fill("{{#name}}hi{{/name}}", {}).text).toBe("{{#name}}hi{{/name}}");
+    expect(fill("{{#note}}x", {}).text).toBe("{{#note}}x");
+  });
+
+  it("counts section keys as used", () => {
+    expect(templateFields("{{#link}}x{{/link}} {{name}}", fields)).toEqual({
+      keys: ["link", "name"],
+      undeclared: [],
+      unused: ["note"],
+    });
+  });
+});

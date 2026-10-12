@@ -242,7 +242,15 @@ interface TemplateField {
 
 An empty value falls back to `default`; an empty required field is an error. A field with an error, and a placeholder with no declared field, stay as `{{key}}` in the text. `errors` is `{ key, message }[]`.
 
-`templateFields(body, fields?)` returns `{ keys, undeclared, unused }`: placeholders in the body, those without a declared field, and declared fields the body never uses. `FIELD_KINDS` lists the kinds.
+A section, `{{#key}}...{{/key}}`, keeps what's inside when `key` fills to something and drops it when the field is empty, so an optional link doesn't leave `[url=]` behind:
+
+```bbcode
+{{#song_link}}[url={{song_link}}]Listen to the song[/url]{{/song_link}}
+```
+
+A section that fills whole lines (its markers at the start of a line and before a line break) takes its line breaks with it, kept or dropped, so no blank lines are left. Sections of different keys nest. A section whose key isn't declared, or whose field has an error, stays as written, and so does an opening marker with no closing one.
+
+`templateFields(body, fields?)` returns `{ keys, undeclared, unused }`: placeholders and section keys in the body, those without a declared field, and declared fields the body never uses. `FIELD_KINDS` lists the kinds.
 
 ### `@haruhimemoe/bbcode/markdown`
 

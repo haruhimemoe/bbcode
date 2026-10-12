@@ -1,10 +1,11 @@
 /**
  * @file src/template/index.ts
- * @desc @haruhimemoe/bbcode/template: BBCode templates with `{{key}}` placeholders and declared
- *       fields. Fill them from form values and find placeholders nobody declared.
+ * @desc @haruhimemoe/bbcode/template: BBCode templates with `{{key}}` placeholders, optional
+ *       `{{#key}}...{{/key}}` sections and declared fields. Fill them from form values and find
+ *       placeholders nobody declared.
  * @author David @dvhsh (https://dvh.sh)
  * @created Mon Sep 28, 2026
- * @modified Mon Sep 28, 2026
+ * @modified Sun Oct 11, 2026
  */
 
 import { FIELD_KINDS, type FieldKind, type FieldValue, formatValue } from "./format.js";
@@ -49,6 +50,11 @@ export interface TemplateFieldsResult {
 
 /** `{{key}}`, spaces allowed inside the braces. */
 const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+/** A section's opening marker, `{{#key}}`. */
+const SECTION_OPEN = /\{\{\s*#\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
+/** An innermost section: `{{#key}}`, text without another opening, `{{/key}}`, a line break. */
+const SECTION =
+  /\{\{\s*#\s*([A-Za-z0-9_.-]+)\s*\}\}((?:(?!\{\{\s*#)[\s\S])*?)\{\{\s*\/\s*\1\s*\}\}(\n?)/g;
 const KEY = /^[A-Za-z0-9_.-]+$/;
 
 /**
@@ -62,7 +68,10 @@ export function templateFields(
   body: string,
   fields: readonly TemplateField[] = [],
 ): TemplateFieldsResult {
-  const keys = [...new Set([...body.matchAll(PLACEHOLDER)].map((m) => m[1] as string))];
+  const found = [...body.matchAll(PLACEHOLDER), ...body.matchAll(SECTION_OPEN)].sort(
+    (a, b) => a.index - b.index,
+  );
+  const keys = [...new Set(found.map((m) => m[1] as string))];
   const declared = new Set(fields.map((f) => f.key));
   return {
     keys,
@@ -116,8 +125,41 @@ export function fillTemplate(
       }
     }
   }
-  const text = body.replace(PLACEHOLDER, (whole, key: string) => filled.get(key) ?? whole);
+  const text = fillSections(body, filled).replace(
+    PLACEHOLDER,
+    (whole, key: string) => filled.get(key) ?? whole,
+  );
   return { text, errors };
+}
+
+const atLineStart = (text: string, at: number): boolean => at === 0 || text[at - 1] === "\n";
+
+/**
+ * Keeps each section whose field filled to something and drops the rest, innermost first. A
+ * section that fills whole lines takes its own line breaks with it. Sections for fields that
+ * aren't declared or didn't fill stay as written.
+ */
+function fillSections(body: string, filled: ReadonlyMap<string, string>): string {
+  let text = body;
+  for (let changed = true; changed; ) {
+    changed = false;
+    text = text.replace(
+      SECTION,
+      (whole, key: string, inner: string, newline: string, at: number, all: string) => {
+        const value = filled.get(key);
+        if (value === undefined) return whole;
+        changed = true;
+        const lineStart = atLineStart(all, at);
+        const lineEnd = newline !== "" || at + whole.length === all.length;
+        if (value === "") return lineStart && lineEnd ? "" : newline;
+        let kept = inner;
+        if (lineStart && kept.startsWith("\n")) kept = kept.slice(1);
+        if (lineEnd && kept.endsWith("\n")) kept = kept.slice(0, -1);
+        return kept + newline;
+      },
+    );
+  }
+  return text;
 }
 
 export { FIELD_KINDS, type FieldKind, type FieldValue } from "./format.js";
